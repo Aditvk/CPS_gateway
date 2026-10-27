@@ -18,7 +18,7 @@ A cloud-deployable, zero-trust middleware gateway that sits in front of Multimod
                                       │
                                       ▼
                         ┌───────────────────────────┐
-                        │    AURA-GATE MIDDLEWARE   │
+                        │    CPS-GATE MIDDLEWARE    │
                         └─────────────┬─────────────┘
                                       │
                ┌──────────────────────┴──────────────────────┐
@@ -150,69 +150,4 @@ Test the 3 interactive viva scenarios with 1 click:
 ### 5. Run the Terminal Side-by-Side Simulation
 ```bash
 python demo/simulate_attack.py
-```
 
----
-
-## 📦 Publishing to GitHub
-
-To push this complete project to your personal GitHub repository:
-
-```bash
-# 1. Initialize git (if not already done)
-git init
-
-# 2. Add all files
-git add .
-
-# 3. Create initial commit
-git commit -m "feat: complete dual-gate cryptographic provenance and steganalysis gateway"
-
-# 4. Set branch to main
-git branch -M main
-
-# 5. Add your GitHub remote repository
-git remote add origin https://github.com/YOUR_USERNAME/multimodal-llm-security-gateway.git
-
-# 6. Push to GitHub
-git push -u origin main
-```
-
-*(Note: `.gitignore` is pre-configured so private keys (`*_private.pem`), virtual environments, and large binary caches are never accidentally committed.)*
-
----
-
-## 📄 IEEE LaTeX Research Paper
-
-The complete research paper is located in [`paper/main.tex`](paper/main.tex) with citations in [`paper/references.bib`](paper/references.bib).
-
-### Compiling on Overleaf:
-1. Go to [Overleaf.com](https://www.overleaf.com) and create a **New Project** ➔ **Upload Project**.
-2. Upload the `paper/` folder (or zip `main.tex` and `references.bib`).
-3. Set Compiler to **pdfLaTeX** and click **Recompile**.
-
-### Compiling Locally:
-```bash
-cd paper
-pdflatex main.tex
-bibtex main
-pdflatex main.tex
-pdflatex main.tex
-```
-
----
-
-## 🎓 Viva / Examiner Defense Cheat Sheet
-
-| Question | Locked Justification |
-|---|---|
-| **Why ECDSA over HMAC?** | ECDSA is asymmetric. The private key never leaves the trusted source. Even if the gateway is fully compromised, an attacker cannot forge signatures. HMAC uses a shared secret, meaning gateway compromise allows signature forgery, destroying non-repudiation. |
-| **Why Xu-Net over ResNet/VGG?** | Generic CNNs optimize for macroscopic semantic objects and miss subtle $\pm 1$ bit perturbations. Xu-Net uses a fixed $5\times 5$ high-pass KV filter to cancel low-frequency content and amplify steganographic residual noise. |
-| **Why not BOSSbase alone?** | BOSSbase tests generic spatial steganography. Our threat model is specifically **Multimodal LLM Prompt Injection**, so we supplement BOSSbase with paired images containing actual OWASP prompt injection payloads. |
-| **Why Containerized Microservice over AWS Lambda?** | PyTorch model sizes and cold-start latencies (~1.5s) on serverless violate real-time gateway constraints. Oracle Cloud free tier provides permanent, dedicated compute with zero cold-starts. |
-| **How does sanitization avoid breaking image quality?** | It uses calibrated lossy DCT quantization ($Q=85$) and micro-rescaling ($\alpha=0.96$). High-frequency stego noise is eliminated while semantic structures, text, and visual contours remain above 38 dB PSNR / 0.96 SSIM. |
-
----
-
-## 📜 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
