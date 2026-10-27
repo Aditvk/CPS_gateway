@@ -86,18 +86,7 @@ async function loadScenario(scenarioId) {
     undefendedBox.innerText = "Simulating direct VLM ingestion without gateway...";
     defendedBox.innerText = "Routing through Dual-Gate Gateway Pipeline...";
 
-    try {
-        const res = await fetch(`${API_BASE}/api/v1/demo/scenario/${scenarioId}`, { method: 'POST' });
-        if (!res.ok) {
-            // Fallback: If demo endpoint is not mounted, invoke the main inspection endpoint directly
-            await executeScenarioClientSide(scenarioId);
-            return;
-        }
-        const data = await res.json();
-        renderScenarioResults(data);
-    } catch (e) {
-        await executeScenarioClientSide(scenarioId);
-    }
+    await executeScenarioClientSide(scenarioId);
 }
 
 // Helper to simulate scenario payloads via canvas & client-side generation

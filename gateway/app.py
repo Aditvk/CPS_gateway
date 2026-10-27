@@ -35,7 +35,7 @@ from typing import Optional, List, Dict, Any
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from crypto.verify import verify_image_bytes, VerificationResult, GateDecision
@@ -77,6 +77,12 @@ vlm_backend = VisionLanguageModelBackend()
 
 # In-memory transaction telemetry log for live dashboard
 TRANSACTION_LOGS: List[Dict[str, Any]] = []
+
+
+@app.get("/")
+def root_redirect():
+    """Redirects root URL directly to the interactive Cyber Defense Dashboard."""
+    return RedirectResponse(url="/dashboard/")
 
 
 @app.get("/health")
