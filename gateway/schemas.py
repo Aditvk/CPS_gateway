@@ -18,6 +18,7 @@ class GatewayEvaluationResponse(BaseModel):
     sanitization_applied: bool
     sanitization_audit: Optional[Dict[str, Any]] = None
     vlm_response: str
+    undefended_vlm_response: Optional[str] = None
     latency_breakdown_ms: Dict[str, float]
     timestamp: str
 
