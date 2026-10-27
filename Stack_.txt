@@ -1,0 +1,24 @@
+Locked Stack + Justifications
+1. Cryptographic Signing — ECDSA
+
+Why chosen (say this in viva): "We chose ECDSA over symmetric schemes like HMAC because asymmetric signing means the private key never leaves the trusted signing source — even if an attacker fully compromises the verification gateway, they still cannot forge a valid signature, since they'd need the private key, not just the public one. This matches how real-world content-provenance standards like C2PA operate, giving our system a credible non-repudiation guarantee, which is essential since our patent claim rests on provable origin, not just probable origin."
+Why not alternatives: HMAC is symmetric — a single shared secret means anyone with gateway access could theoretically forge signatures too, which weakens the "cryptographic proof" claim. Hash-chains add complexity relevant to sequential/streamed data, not single independent image uploads like ours.
+
+2. Steganalysis Model — Xu-Net
+
+Why chosen: "We selected Xu-Net specifically because it's a published, peer-reviewed architecture designed for steganalysis (not a generic CNN repurposed for the task) — it uses a fixed high-pass filter layer at the input specifically tuned to amplify the subtle statistical noise steganographic embedding introduces, which generic CNNs miss. Using an established architecture also means our results are benchmarkable against existing literature, strengthening the research-paper angle."
+Why not alternatives: A plain CNN (Option A) lacks that stego-specific noise-amplification design, so accuracy suffers on subtle embeddings. Autoencoder-based anomaly detection doesn't need labeled data but trades off accuracy and doesn't give a confidence score as cleanly for our Gate-2 decision logic.
+
+3. Dataset — BOSSbase + self-generated stegano/openstego set
+
+Why chosen: "We used BOSSbase because it's the de facto benchmark dataset in steganalysis research, letting us validate our model against known, citable baselines. We supplemented it with a self-generated dataset using stegano/openstego to embed actual prompt-injection-style text payloads into clean images — because BOSSbase tests generic stego detection, but our specific threat model is prompt-injection payloads, so we needed data that matches our actual attack scenario for a realistic demo and evaluation."
+Why not alternatives: Relying on BOSSbase alone would mean our evaluation doesn't actually reflect the LLM-injection threat we're defending against — it's generic stego, not injection-shaped payloads.
+
+4. Cloud Architecture — Oracle Cloud free-tier, Dockerized FastAPI microservice
+
+Why chosen: "We chose a containerized microservice over serverless (Lambda-style) because our DL steganalysis model's size and inference time exceed typical serverless constraints — Lambda has deployment package limits (~250MB) and cold-start latency that would hurt real-time gateway performance. A container gives us full control over the runtime environment and no cold-start penalty. Oracle Cloud's free tier was chosen specifically because it's free permanently, not a 12-month trial like AWS/Azure/GCP, making the prototype sustainably runnable beyond the semester for demo/portfolio purposes."
+Why not alternatives: AWS Lambda/Azure Functions are attractive for cost but constrain model size and introduce latency variance that would undermine the "real-time gateway" framing of the patent claim.
+
+5. Demo — Dashboard + side-by-side live comparison + recorded fallback
+
+Why chosen: "We built a live dashboard to give examiners visibility into the gateway's real-time decision-making (signature verified / steganalysis flagged / sanitized) rather than a black-box terminal log, since transparency of the defense mechanism is itself part of our system's value proposition. The side-by-side undefended-vs-defended comparison directly demonstrates the vulnerability and the fix in one view, which is the clearest way to show impact in a short viva slot. The recorded fallback protects against live-demo risk (network/cloud dependency failure during evaluation), which is standard practice for any live cloud-dependent system demo."

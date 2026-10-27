@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multimodal LLM Dual-Gate Gateway | Cyber Defense Console</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="navbar">
+        <div class="brand">
+            <span class="shield-icon">🛡️</span>
+            <div>
+                <h1>AURA-GATE // Multimodal LLM Shield</h1>
+                <p class="subtitle">Cryptographic Provenance + Deep Steganalysis Dual-Gate Architecture</p>
+            </div>
+        </div>
+        <div class="system-status">
+            <span class="status-indicator online"></span>
+            <span class="status-text">GATEWAY ONLINE (P-256 + Xu-Net)</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Telemetry Stats Cards -->
+        <section class="stats-grid">
+            <div class="card stat-card">
+                <span class="stat-label">Total Inbound Requests</span>
+                <span class="stat-value" id="stat-total">0</span>
+                <span class="stat-meta">Multimodal Inputs Processed</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-label">Gate 1 Crypto Fast-Pass</span>
+                <span class="stat-value text-accent" id="stat-gate1">0</span>
+                <span class="stat-meta">Verified ECDSA P-256 (0ms DL)</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-label">Gate 2 Clean Passes</span>
+                <span class="stat-value text-clean" id="stat-gate2">0</span>
+                <span class="stat-meta">Xu-Net P(stego) &lt; 0.50</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-label">Injections Neutralized</span>
+                <span class="stat-value text-alert" id="stat-sanitized">0</span>
+                <span class="stat-meta">Multi-Stage Perceptual Sanitization</span>
+            </div>
+        </section>
+
+        <!-- Pipeline Workflow Visualizer -->
+        <section class="card pipeline-card">
+            <h2>Dual-Gate Security Architecture Workflow</h2>
+            <div class="pipeline-diagram">
+                <div class="pipe-node" id="node-upload">
+                    <span class="node-title">1. Image Ingestion</span>
+                    <span class="node-desc">Client/VLM Request</span>
+                </div>
+                <div class="pipe-arrow">➜</div>
+                <div class="pipe-node" id="node-gate1">
+                    <span class="node-title">Gate 1: Provenance</span>
+                    <span class="node-desc">ECDSA P-256 Check</span>
+                </div>
+                <div class="pipe-arrow">➜</div>
+                <div class="pipe-node" id="node-gate2">
+                    <span class="node-title">Gate 2: Steganalysis</span>
+                    <span class="node-desc">Xu-Net KV-Filter</span>
+                </div>
+                <div class="pipe-arrow">➜</div>
+                <div class="pipe-node" id="node-sanitizer">
+                    <span class="node-title">Fallback Sanitizer</span>
+                    <span class="node-desc">Multi-Stage Scrubber</span>
+                </div>
+                <div class="pipe-arrow">➜</div>
+                <div class="pipe-node" id="node-vlm">
+                    <span class="node-title">Protected VLM</span>
+                    <span class="node-desc">Safe Inference</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Testing Bench -->
+        <section class="test-bench-grid">
+            <!-- Left: Controls & Upload -->
+            <div class="card control-card">
+                <h2>Interactive Attack & Verification Bench</h2>
+                <p class="description">Select a pre-configured scenario or upload custom image with prompt injection payload.</p>
+                
+                <div class="preset-buttons">
+                    <button class="btn btn-preset" onclick="loadScenario(1)">
+                        <span class="preset-tag pass">Scenario 1</span>
+                        <strong>Clean & Signed Source</strong>
+                        <small>Passes Gate 1 (Fast-Path)</small>
+                    </button>
+                    <button class="btn btn-preset" onclick="loadScenario(2)">
+                        <span class="preset-tag warn">Scenario 2</span>
+                        <strong>Signed then Tampered</strong>
+                        <small>Fails Gate 1 ➔ Scanned by Gate 2</small>
+                    </button>
+                    <button class="btn btn-preset" onclick="loadScenario(3)">
+                        <span class="preset-tag danger">Scenario 3</span>
+                        <strong>Stego Prompt Injection</strong>
+                        <small>Unsigned ➔ Flagged & Sanitized</small>
+                    </button>
+                </div>
+
+                <div class="divider"><span>OR CUSTOM INPUT</span></div>
+
+                <form id="inspection-form">
+                    <div class="form-group">
+                        <label for="image-upload">Target Image (Cover or Stego):</label>
+                        <input type="file" id="image-upload" accept="image/png, image/jpeg" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="manifest-input">Cryptographic Manifest JSON (Optional):</label>
+                        <textarea id="manifest-input" placeholder='{"hash_sha256": "...", "signature_b64": "...", "source_id": "trusted-source-1"}' rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prompt-input">User Query to Multimodal LLM:</label>
+                        <input type="text" id="prompt-input" value="Describe this image in detail." required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btn-submit">
+                        <span>🛡️ Dispatch Through Gateway</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Right: Side-by-Side Comparison -->
+            <div class="card comparison-card">
+                <h2>Side-by-Side Security Comparison</h2>
+                <div class="comparison-split">
+                    <!-- Undefended -->
+                    <div class="comp-col undefended-col">
+                        <div class="comp-header">
+                            <span class="badge danger">UNDEFENDED VLM</span>
+                            <span class="sub">Standard direct input</span>
+                        </div>
+                        <div class="comp-body" id="undefended-output">
+                            <div class="placeholder-text">Run a scenario or submit an image to observe undefended model vulnerability.</div>
+                        </div>
+                    </div>
+
+                    <!-- Defended -->
+                    <div class="comp-col defended-col">
+                        <div class="comp-header">
+                            <span class="badge success">DUAL-GATE SHIELDED</span>
+                            <span class="sub">Crypto + Steganalysis</span>
+                        </div>
+                        <div class="comp-body" id="defended-output">
+                            <div class="placeholder-text">Dual-gate inspection telemetry will render here in real time.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Audit Log Table -->
+        <section class="card logs-card">
+            <h2>Real-Time Security Audit Telemetry</h2>
+            <div class="table-responsive">
+                <table class="audit-table">
+                    <thead>
+                        <tr>
+                            <th>Tx ID</th>
+                            <th>Time</th>
+                            <th>Gate 1 (Provenance)</th>
+                            <th>Gate 2 (Xu-Net)</th>
+                            <th>Decision & Action</th>
+                            <th>Total Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-table-body">
+                        <tr>
+                            <td colspan="6" class="empty-state">No transactions recorded yet. Run a scenario above.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Capstone Project // Dual-Gate Cryptographic Provenance & Deep Steganalysis Gateway</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
