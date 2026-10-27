@@ -31,11 +31,11 @@
 % Professional Academic Color Palette (IEEE Standard Deep Blue Theme)
 \definecolor{cpsblue}{RGB}{0, 68, 148}       % IEEE Royal/Navy Blue
 \definecolor{cpsdark}{RGB}{24, 32, 44}       % Charcoal body accent
-\definecolor{cpslight}{RGB}{244, 247, 252}   % Soft blue tinted background
-\definecolor{cpsgreen}{RGB}{20, 115, 60}     % Emerald pass / authenticated
+\definecolor{cpslight}{RGB}{246, 248, 252}   % Soft blue tinted background
+\definecolor{cpsgreen}{RGB}{18, 120, 56}     % Emerald pass / authenticated
 \definecolor{cpsamber}{RGB}{195, 85, 0}      % Amber / Steganalysis trigger
 \definecolor{cpsred}{RGB}{185, 28, 28}       % Crimson / Sanitizer & attack
-\definecolor{bordergray}{RGB}{180, 192, 205} % Crisp hairline borders
+\definecolor{bordergray}{RGB}{175, 188, 202} % Crisp hairline borders
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -90,37 +90,37 @@ To resolve these challenges, we present \textbf{CPS-Gateway}, a lightweight, mod
 \end{itemize}
 
 % =========================================================================
-% FIGURE 1: CLEAN TIKZ VECTOR PIPELINE (ACCURATE ARROWS, BOUNDED WIDTH)
+% FIGURE 1: REDESIGNED TIKZ VECTOR PIPELINE (ACCURATE ORTHOGONAL ARROWS)
 % =========================================================================
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-  scale=0.84, every node/.style={transform shape},
-  node distance=0.62cm,
+  scale=0.82, every node/.style={transform shape},
+  node distance=0.58cm,
   font=\sffamily,
   block/.style={
     rectangle, draw=cpsblue!80, thick, fill=cpslight,
-    text width=5.0cm, minimum height=0.68cm, align=center,
+    text width=4.6cm, minimum height=0.68cm, align=center,
     rounded corners=3pt, font=\sffamily\scriptsize
   },
   gate1/.style={
     rectangle, draw=cpsblue, very thick, fill=cpsblue!8,
-    text width=5.0cm, minimum height=0.78cm, align=center,
+    text width=4.6cm, minimum height=0.78cm, align=center,
     rounded corners=4pt, font=\sffamily\scriptsize
   },
   gate2/.style={
     rectangle, draw=cpsamber, very thick, fill=cpsamber!8,
-    text width=5.0cm, minimum height=0.82cm, align=center,
+    text width=4.6cm, minimum height=0.82cm, align=center,
     rounded corners=4pt, font=\sffamily\scriptsize
   },
   sanitizer/.style={
     rectangle, draw=cpsred, very thick, fill=cpsred!8,
-    text width=5.0cm, minimum height=0.74cm, align=center,
+    text width=4.6cm, minimum height=0.74cm, align=center,
     rounded corners=4pt, font=\sffamily\scriptsize
   },
   vlm/.style={
     rectangle, draw=cpsgreen, very thick, fill=cpsgreen!10,
-    text width=5.0cm, minimum height=0.74cm, align=center,
+    text width=4.6cm, minimum height=0.74cm, align=center,
     rounded corners=4pt, font=\sffamily\bfseries\scriptsize
   },
   decision/.style={
@@ -130,34 +130,38 @@ To resolve these challenges, we present \textbf{CPS-Gateway}, a lightweight, mod
   pathline/.style={draw=cpsdark, thick, -Stealth}
 ]
 
-  % Core sequence nodes
-  \node[block] (input) {\textbf{Multimodal Asset Ingestion}\\(Image Asset $\mathbf{I} + $ User Prompt $\mathcal{Q}$)};
+  % Core vertical sequence
+  \node[block] (input) {\textbf{Multimodal Asset Ingestion}\\(Image Asset $\mathbf{I}$ and User Query $\mathcal{Q}$)};
   \node[gate1, below=of input] (g1) {\textbf{GATE 1: Provenance Verification Engine}\\ECDSA P-256 Signature Manifest $\mathcal{M}(r, s)$};
   \node[decision, below=of g1] (d1) {Signature Valid?};
-  \node[gate2, below=of d1, yshift=-0.12cm] (g2) {\textbf{GATE 2: Multi-Signal Steganalysis}\\Xu-Net Residual CNN + LSB Transition Entropy};
+  \node[gate2, below=of d1, yshift=-0.14cm] (g2) {\textbf{GATE 2: Multi-Signal Steganalysis}\\Xu-Net Residual CNN + LSB Transition Entropy};
   \node[decision, below=of g2] (d2) {Stego Detected? ($P \ge 0.5$)};
-  \node[sanitizer, below=of d2, yshift=-0.12cm] (san) {\textbf{FALLBACK: Perceptual Sanitizer}\\Rescale ($0.96\times$) $\to$ Dither $\to$ DCT ($Q{=}85$)};
-  \node[vlm, below=of san, yshift=-0.1cm] (vlm) {Target Multimodal LLM (VLM Core)\\Safe, Shielded Visual Context};
+  \node[sanitizer, below=of d2, yshift=-0.14cm] (san) {\textbf{FALLBACK: Perceptual Sanitizer}\\Rescale ($0.96\times$) $\to$ Dither $\to$ DCT ($Q{=}85$)};
+  \node[vlm, below=of san, yshift=-0.12cm] (vlm) {Target Multimodal LLM (VLM Core)\\Safe, Shielded Visual Context};
 
-  % Downward vertical transitions
-  \path[pathline] (input) -- (g1);
-  \path[pathline] (g1) -- (d1);
-  \path[pathline] (d1) -- node[right, font=\sffamily\tiny\bfseries, text=cpsamber] {\,Unsigned / Tampered} (g2);
-  \path[pathline] (g2) -- (d2);
-  \path[pathline] (d2) -- node[right, font=\sffamily\tiny\bfseries, text=cpsred] {\,Yes (Anomaly Flagged)} (san);
-  \path[pathline] (san) -- (vlm);
+  % Downward vertical transitions with centered text
+  \draw[pathline] (input) -- (g1);
+  \draw[pathline] (g1) -- (d1);
+  \draw[pathline] (d1) -- node[right=2pt, font=\sffamily\tiny\bfseries, text=cpsamber] {Unsigned / Tampered} (g2);
+  \draw[pathline] (g2) -- (d2);
+  \draw[pathline] (d2) -- node[right=2pt, font=\sffamily\tiny\bfseries, text=cpsred] {Yes (Anomaly Flagged)} (san);
+  \draw[pathline] (san) -- (vlm);
 
-  % Right-side bypass track (Gate 1 Fast-Path)
-  \draw[draw=cpsblue, very thick, -Stealth] (d1.east) -- ++(1.15,0)
-    node[above, pos=0.55, font=\sffamily\tiny\bfseries, text=cpsblue] {Valid}
-    node[below, pos=0.55, font=\sffamily\tiny, text=cpsblue] {(0.48ms)}
-    |- (vlm.east);
+  % Coordinates strictly clearing the widest rectangle (half-width 2.3cm + 0.7cm clearance = 3.0cm)
+  \coordinate (trackR) at ($(vlm.east) + (0.75, 0)$);
+  \coordinate (trackL) at ($(vlm.west) + (-0.75, 0)$);
 
-  % Left-side bypass track (Gate 2 Clean Forwarding)
-  \draw[draw=cpsgreen, very thick, -Stealth] (d2.west) -- ++(-1.15,0)
-    node[above, pos=0.55, font=\sffamily\tiny\bfseries, text=cpsgreen] {No (Clean)}
-    node[below, pos=0.55, font=\sffamily\tiny, text=cpsgreen] {(15.1ms)}
-    |- (vlm.west);
+  % Right-side bypass track (Gate 1 Fast-Path to VLM: moves Right, Down, then Left into VLM)
+  \draw[draw=cpsblue, very thick, -Stealth]
+    (d1.east) -- node[above=1pt, font=\sffamily\tiny\bfseries, text=cpsblue] {Valid (0.48ms)} (d1.east -| trackR)
+    -- (vlm.east -| trackR)
+    -- (vlm.east);
+
+  % Left-side bypass track (Gate 2 Clean Forwarding: moves Left, Down, then Right into VLM)
+  \draw[draw=cpsgreen, very thick, -Stealth]
+    (d2.west) -- node[above=1pt, font=\sffamily\tiny\bfseries, text=cpsgreen] {No (Clean) (15.1ms)} (d2.west -| trackL)
+    -- (vlm.west -| trackL)
+    -- (vlm.west);
 
 \end{tikzpicture}
 \caption{Architectural workflow of the \textbf{CPS-Gateway} middleware. Authenticated images achieve sub-millisecond fast-path ingestion via Gate~1. Unsigned or tampered assets are directed to Gate~2 for multi-signal residual steganalysis; detected stego payloads are permanently scrubbed by the perceptual sanitizer before VLM tokenization.}
@@ -183,6 +187,7 @@ Table~\ref{tab:comparison} contrasts existing defense paradigms against CPS-Gate
 \caption{Comparative Gap Analysis: CPS-Gateway vs. Existing Defense Paradigms}
 \label{tab:comparison}
 \centering
+\vspace{-1.5mm}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
@@ -196,6 +201,7 @@ Output Watermarking (C2PA \cite{c2pa2023spec}) & Generation Metadata & Partial &
 \bottomrule
 \end{tabular}%
 }
+\vspace{1.5mm}
 \end{table*}
 
 \section{Threat Model and Mathematical Formulation}
@@ -260,32 +266,32 @@ Standard convolutional kernels are trained to minimize semantic classification l
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-  scale=0.84, every node/.style={transform shape},
-  node distance=0.55cm,
+  scale=0.82, every node/.style={transform shape},
+  node distance=0.52cm,
   font=\sffamily,
   block/.style={
     rectangle, draw=cpsblue!80, thick, fill=cpslight,
-    text width=5.2cm, minimum height=0.62cm, align=center,
+    text width=4.8cm, minimum height=0.62cm, align=center,
     rounded corners=3pt, font=\sffamily\scriptsize
   },
   kernel/.style={
     rectangle, draw=cpsamber, very thick, fill=cpsamber!10,
-    text width=5.2cm, minimum height=0.74cm, align=center,
+    text width=4.8cm, minimum height=0.74cm, align=center,
     rounded corners=3pt, font=\sffamily\scriptsize
   },
   conv/.style={
     rectangle, draw=cpsblue, thick, fill=cpsblue!8,
-    text width=5.2cm, minimum height=0.70cm, align=center,
+    text width=4.8cm, minimum height=0.70cm, align=center,
     rounded corners=3pt, font=\sffamily\scriptsize
   },
   metric/.style={
     rectangle, draw=cpsdark, thick, fill=white,
-    text width=5.2cm, minimum height=0.72cm, align=center,
+    text width=4.8cm, minimum height=0.72cm, align=center,
     rounded corners=3pt, font=\sffamily\scriptsize
   },
   decision/.style={
     rectangle, draw=cpsred, very thick, fill=cpsred!10,
-    text width=5.2cm, minimum height=0.70cm, align=center,
+    text width=4.8cm, minimum height=0.70cm, align=center,
     rounded corners=3pt, font=\sffamily\bfseries\scriptsize
   },
   pathline/.style={draw=cpsdark, thick, -Stealth}
@@ -298,11 +304,11 @@ Standard convolutional kernels are trained to minimize semantic classification l
   \node[metric, below=of convs] (stat) {\textbf{Statistical \& Signature Verification Engine}\\$\bullet$ Spatial LSB Transition Entropy $\mathcal{D}_h$\\$\bullet$ Regex Pattern Scanner (OWASP Injection Keywords)};
   \node[decision, below=of stat] (out) {\textbf{Ensemble Anomaly Decision} $P(\text{stego} \mid \mathbf{I})$\\$\tau \ge 0.50 \implies$ Divert to Perceptual Sanitizer};
 
-  \path[pathline] (in) -- (kv);
-  \path[pathline] (kv) -- (abs);
-  \path[pathline] (abs) -- (convs);
-  \path[pathline] (convs) -- (stat);
-  \path[pathline] (stat) -- (out);
+  \draw[pathline] (in) -- (kv);
+  \draw[pathline] (kv) -- (abs);
+  \draw[pathline] (abs) -- (convs);
+  \draw[pathline] (convs) -- (stat);
+  \draw[pathline] (stat) -- (out);
 
 \end{tikzpicture}
 \caption{Detailed architectural pipeline of the Gate~2 Multi-Signal Steganalysis Engine. Input images pass through a non-trainable 5$\times$5 KV high-pass filter and absolute value activation to isolate noise residuals, followed by convolutional feature extraction and statistical bitplane analysis.}
@@ -312,7 +318,9 @@ Standard convolutional kernels are trained to minimize semantic classification l
 \subsubsection{Fixed High-Pass KV Filtering}
 To suppress semantic image content, the input image is preprocessed by a non-trainable 5$\times$5 high-pass filter kernel $\mathbf{K}$ developed by Kortelainen and Vuori \cite{xu2016structural}:
 \begin{equation}
-\setlength{\arraycolsep}{2.5pt}
+\begingroup
+\renewcommand{\arraystretch}{0.90}
+\setlength{\arraycolsep}{2.2pt}
 \mathbf{K} = \frac{1}{12} \begin{bmatrix}
 -1 & \phantom{-}2 & -2 & \phantom{-}2 & -1 \\
 \phantom{-}2 & -6 & \phantom{-}8 & -6 & \phantom{-}2 \\
@@ -320,6 +328,7 @@ To suppress semantic image content, the input image is preprocessed by a non-tra
 \phantom{-}2 & -6 & \phantom{-}8 & -6 & \phantom{-}2 \\
 -1 & \phantom{-}2 & -2 & \phantom{-}2 & -1
 \end{bmatrix}.
+\endgroup
 \end{equation}
 The residual feature map $\mathbf{R}$ isolates pixel-to-pixel variances:
 \begin{equation}
@@ -327,18 +336,14 @@ The residual feature map $\mathbf{R}$ isolates pixel-to-pixel variances:
 \end{equation}
 
 \subsubsection{Absolute Value Activation}
-Residual outputs pass through an Absolute Value (ABS) activation layer:
-\begin{equation}
-    f_{ABS}(z) = |z|.
-\end{equation}
-Because steganographic modifications $+1$ and $-1$ occur with statistically symmetric probability, sign-invariance prevents positive and negative residuals from cancelling out during spatial convolution.
+Residual outputs pass through an Absolute Value (ABS) activation function, defined as $f_{\text{ABS}}(z) = |z|$. Because steganographic modifications $+1$ and $-1$ occur with statistically symmetric probability, sign-invariance prevents positive and negative residuals from cancelling out during spatial convolution.
 
 \subsubsection{Spatial LSB Entropy Analysis}
-In tandem with the CNN, Gate~2 computes the horizontal and vertical transition entropy across the least significant bitplane $\mathbf{B}_0 \in \{0, 1\}^{H \times W}$:
+In tandem with the CNN, Gate~2 computes the horizontal transition entropy across the least significant bitplane $\mathbf{B}_0 \in \{0, 1\}^{H \times W}$:
 \begin{equation}
     \mathcal{D}_h = \frac{1}{W(H-1)} \sum_{y=1}^{H} \sum_{x=1}^{W-1} |\mathbf{B}_0(x, y) - \mathbf{B}_0(x+1, y)|.
 \end{equation}
-For natural uncompressed images, spatial correlation keeps $\mathcal{D}_h \approx 0.15\text{--}0.35$. Pseudo-random steganographic payloads drive $\mathcal{D}_h \to 0.50$, serving as a fast orthogonal metric.
+For natural uncompressed images, spatial correlation keeps $\mathcal{D}_h \approx 0.15\text{--}0.35$. Pseudo-random steganographic payloads drive $\mathcal{D}_h \to 0.50$, serving as an orthogonal statistical indicator.
 
 \subsection{Gate 2 Fallback: Multi-Stage Perceptual Sanitizer}
 When Gate~2 flags an anomaly ($P(\text{stego}) \ge 0.50$), rejecting the asset directly causes denial-of-service on noisy benign photos. Instead, the asset is passed through a multi-stage perceptual sanitizer:
@@ -346,9 +351,9 @@ When Gate~2 flags an anomaly ($P(\text{stego}) \ge 0.50$), rejecting the asset d
     \item \textbf{EXIF/Metadata Scrubber:} Strips binary header chunks and auxiliary EXIF fields.
     \item \textbf{Spatial Sub-pixel Rescaling:} Rescales image dimensions by factor $\alpha = 0.96$ using bilinear interpolation, then restores dimensions to $(H, W)$ via bicubic interpolation:
     \begin{equation}
-        \mathbf{I}_{scaled} = \mathcal{R}_{\text{bicubic}}(\mathcal{R}_{\text{bilinear}}(\mathbf{I}, \alpha), \alpha^{-1}).
+        \mathbf{I}_{scaled} = \mathcal{R}_{\text{bicubic}}(\mathcal{R}_{\text{bilinear}}(\mathbf{I}, \alpha), \alpha^{-1}),
     \end{equation}
-    This breaks discrete pixel grid coordinate alignments.
+    which permanently breaks discrete pixel grid coordinate alignments.
     \item \textbf{LSB Bitplane Dithering:} The lowest bitplane is scrambled using uniform noise $\mathbf{N} \sim \mathcal{U}\{0, 1\}$:
     \begin{equation}
         \mathbf{I}_{dithered} = (\mathbf{I}_{scaled} \ \& \ \text{0xFE}) \ | \ \mathbf{N}.
@@ -378,6 +383,7 @@ Table~\ref{tab:stego_perf} details the detection accuracy, precision, recall, an
 \caption{Gate 2 Multi-Signal Steganalysis Performance}
 \label{tab:stego_perf}
 \centering
+\vspace{-1.5mm}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
@@ -390,6 +396,7 @@ Table~\ref{tab:stego_perf} details the detection accuracy, precision, recall, an
 \bottomrule
 \end{tabular}%
 }
+\vspace{1.5mm}
 \end{table}
 
 \subsection{Latency and Gateway Overhead}
@@ -399,9 +406,10 @@ Table~\ref{tab:latency} summarizes the latency across different gateway paths. G
 % TABLE III: LATENCY BREAKDOWN (RESIZED TO EXACT COLUMNWIDTH)
 % =========================================================================
 \begin{table}[t]
-\caption{End-to-End Latency Breakdown Across Gateway Ingestion Paths}
+\caption{End-to-End Latency Breakdown Across Ingestion Paths}
 \label{tab:latency}
 \centering
+\vspace{-1.5mm}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
@@ -414,18 +422,20 @@ Undefended Baseline & 0.00 & 0.00 & 0.00 & 0.00 \\
 \bottomrule
 \end{tabular}%
 }
+\vspace{1.5mm}
 \end{table}
 
 \subsection{Sanitization Neutralization and Perceptual Preservation}
 Table~\ref{tab:sanitization} evaluates the survival of steganographic prompt injection payloads post-sanitization. While single transformations (e.g., standard JPEG compression or spatial rescaling alone) leave 4.8\% to 14.2\% of payloads recoverable, our multi-stage pipeline achieves \textbf{0.0\% payload survival} across all 1,000 test cases. Meanwhile, image quality is maintained with an average PSNR of 38.9~dB and SSIM of 0.964. Downstream VQA accuracy drops by only 0.8\%, confirming that visual reasoning is preserved while adversarial channels are eliminated.
 
 % =========================================================================
-% TABLE IV: SANITIZATION QUALITY (RESIZED TO EXACT COLUMNWIDTH - NO OVERLAP)
+% TABLE IV: SANITIZATION QUALITY (RESIZED TO EXACT COLUMNWIDTH)
 % =========================================================================
 \begin{table}[t]
 \caption{Sanitization Payload Neutralization and Perceptual Quality}
 \label{tab:sanitization}
 \centering
+\vspace{-1.5mm}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
@@ -438,18 +448,20 @@ Spatial Rescale ($\alpha=0.96$) & 4.8\% & 41.5 & 0.976 & 93.6\% (Vulnerable) \\
 \bottomrule
 \end{tabular}%
 }
+\vspace{1.5mm}
 \end{table}
 
 \subsection{Vulnerability Mitigation Case Study}
 Table~\ref{tab:case_study} demonstrates the comparative execution between an undefended VLM and our shielded CPS-Gateway architecture when exposed to an active prompt injection image. In the undefended system, the hidden instruction overrides safety boundaries and leaks system API keys. Under CPS-Gateway, the payload is detected with 98.5\% confidence, sanitized, and safely neutralized.
 
 % =========================================================================
-% TABLE V: CASE STUDY (EXACT COLUMNWIDTH WITH PROPER TEXT WRAPPING)
+% TABLE V: CASE STUDY (EXACT COLUMNWIDTH WITH CLEAN WRAPPING)
 % =========================================================================
 \begin{table}[t]
-\caption{Case Study: Undefended VLM vs. CPS-Gateway Enclave Execution}
+\caption{Case Study: Undefended VLM vs. CPS-Gateway Execution}
 \label{tab:case_study}
 \centering
+\vspace{-1.5mm}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lp{5.4cm}}
 \toprule
@@ -465,6 +477,7 @@ Table~\ref{tab:case_study} demonstrates the comparative execution between an und
 \bottomrule
 \end{tabular}%
 }
+\vspace{1.5mm}
 \end{table}
 
 \section{Security Analysis and Discussion}
