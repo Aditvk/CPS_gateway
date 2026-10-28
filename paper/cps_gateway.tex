@@ -175,28 +175,45 @@ C2PA \cite{c2pa2023spec} & Signed manifest & Yes & No & Yes (Origin, not content
 \begin{tikzpicture}[
   scale=0.88, every node/.style={transform shape},
   font=\sffamily,
-  box/.style={rectangle, draw=cpsblue!80, thick, fill=cpslight, text width=2.6cm, minimum height=1.1cm, align=center, rounded corners=3pt, font=\sffamily\scriptsize},
-  diamondnode/.style={diamond, draw=cpsdark, thick, fill=white, aspect=1.8, inner sep=1pt, align=center, font=\sffamily\scriptsize},
+  box/.style={rectangle, draw=cpsblue!80, thick, fill=cpslight, text width=2.6cm, minimum height=1.0cm, align=center, rounded corners=3pt, font=\sffamily\scriptsize},
+  diamondnode/.style={diamond, draw=cpsdark, thick, fill=white, aspect=1.8, inner sep=1.5pt, align=center, font=\sffamily\scriptsize},
   arrowline/.style={draw=cpsdark, thick, -Stealth}
 ]
 
   % Sequence nodes
   \node[box] (input) {Image $\mathbf{I}$ and\\optional manifest $\mathcal{M}$};
   \node[diamondnode, right=1.2cm of input] (g1) {Gate 1:\\valid?};
-  \node[box, right=5.2cm of g1] (vlm) {\textbf{Target MLLM}\\(Visual Encoder)};
+  \node[box, right=5.4cm of g1, text width=2.8cm] (vlm) {\textbf{Target MLLM}\\(Visual Encoder)};
 
-  \node[box, below=1.2cm of g1, xshift=1.8cm, text width=3.8cm] (g2) {\textbf{Gate 2: Multi-Signal}\\Xu-Net CNN, LSB statistic,\\signature scan};
-  \node[diamondnode, right=1.0cm of g2] (g2test) {$P \ge \tau$?};
-  \node[box, below=1.0cm of g2test, text width=2.8cm] (san) {\textbf{Perceptual Sanitizer}\\Rescale $\to$ Dither $\to$ JPEG};
+  % Gate 2 block placed below g1 and shifted right
+  \node[box, below=1.3cm of g1, xshift=1.6cm, text width=3.6cm] (g2) {\textbf{Gate 2: Multi-Signal}\\Xu-Net CNN, LSB statistic,\\signature scan};
 
-  % Connecting lines
+  % Decision diamond aligned directly under the center of vlm!
+  \node[diamondnode] (g2test) at (vlm |- g2) {$P \ge \tau$?};
+
+  % Sanitizer block directly under g2test
+  \node[box, below=1.1cm of g2test, text width=2.8cm] (san) {\textbf{Perceptual Sanitizer}\\Rescale $\to$ Dither $\to$ JPEG};
+
+  % 1. Input to Gate 1
   \draw[arrowline] (input) -- (g1);
-  \draw[draw=cpsblue, very thick, -Stealth] (g1) -- node[above, font=\sffamily\scriptsize\bfseries, text=cpsblue] {Yes (Fast Path, 0.16 ms)} (vlm);
-  \draw[arrowline] (g1) |- node[near start, left, font=\sffamily\tiny\bfseries, text=cpsamber] {No, absent, stale or modified} (g2);
-  \draw[arrowline] (g2) -- (g2test);
-  \draw[draw=cpsgreen, very thick, -Stealth] (g2test) |- node[near start, above, font=\sffamily\tiny\bfseries, text=cpsgreen] {No (Clean, 20.8 ms)} (vlm);
-  \draw[draw=cpsred, very thick, -Stealth] (g2test) -- node[right, font=\sffamily\tiny\bfseries, text=cpsred] {Yes} (san);
-  \draw[draw=cpsred, thick, -Stealth] (san) -| (vlm);
+
+  % 2. Gate 1 to VLM: Fast-path (Blue, straight horizontal entering WEST face)
+  \draw[draw=cpsblue, very thick, -Stealth] (g1.east) -- node[above, font=\sffamily\scriptsize\bfseries, text=cpsblue] {Yes (Fast Path, 0.16 ms)} (vlm.west);
+
+  % 3. Gate 1 Unsigned/Tampered path to Gate 2 (Amber, downward)
+  \draw[arrowline] (g1.south) |- node[near start, left, font=\sffamily\tiny\bfseries, text=cpsamber] {No, absent, stale or modified} (g2.west);
+
+  % 4. Gate 2 to Decision Diamond
+  \draw[arrowline] (g2.east) -- (g2test.west);
+
+  % 5. Gate 2 Clean Path: Straight UP into SOUTH face of VLM! (Green, vertical, zero overlap)
+  \draw[draw=cpsgreen, very thick, -Stealth] (g2test.north) -- node[right, font=\sffamily\tiny\bfseries, text=cpsgreen] {No (Clean, 20.8 ms)} (vlm.south);
+
+  % 6. Gate 2 Flagged Path: Straight DOWN into Sanitizer! (Red, vertical)
+  \draw[draw=cpsred, very thick, -Stealth] (g2test.south) -- node[right, font=\sffamily\tiny\bfseries, text=cpsred] {Yes} (san.north);
+
+  % 7. Sanitizer to VLM: Around right edge entering EAST face of VLM! (Red, zero overlap)
+  \draw[draw=cpsred, very thick, -Stealth] (san.east) -| ($(vlm.east) + (0.6, 0)$) -- (vlm.east);
 
 \end{tikzpicture}
 \caption{\textbf{CPS-Gateway workflow.} Images with a valid, fresh manifest take the Gate~1 fast path. All other images are analyzed by Gate~2, and flagged images are sanitized before reaching the visual encoder.}
@@ -256,35 +273,43 @@ with $\boldsymbol{\beta}$ fitted on a validation split and $\tau = 0.50$ chosen 
 % =========================================================================
 \begin{figure}[t]
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tikzpicture}[
-  scale=0.78, every node/.style={transform shape},
+  scale=0.82, every node/.style={transform shape},
   font=\sffamily,
-  block/.style={rectangle, draw=cpsblue!80, thick, fill=cpslight, text width=1.9cm, minimum height=0.7cm, align=center, rounded corners=2pt, font=\sffamily\tiny},
+  block/.style={rectangle, draw=cpsblue!80, thick, fill=cpslight, text width=2.0cm, minimum height=0.68cm, align=center, rounded corners=2pt, font=\sffamily\tiny},
   arrowline/.style={draw=cpsdark, thick, -Stealth}
 ]
 
-  \node[block, text width=1.6cm] (in) {Unverified\\Image $\mathbf{I}$};
-  \node[block, right=0.6cm of in, yshift=0.8cm] (kv) {Frozen $5\times5$\\KV Filter};
-  \node[block, right=0.4cm of kv] (abs) {ABS\\Layer};
-  \node[block, right=0.4cm of abs] (conv) {Xu-Net\\Conv Blocks};
+  % Input node
+  \node[block, text width=1.4cm] (in) {Unverified\\Image $\mathbf{I}$};
 
-  \node[block, right=0.6cm of in, text width=2.2cm] (lsb) {LSB Transition\\Statistic $\mathcal{D}_h$};
-  \node[block, right=0.6cm of in, yshift=-0.8cm, text width=2.2cm] (sig) {Payload-Signature\\Scan $s_{sig}$};
+  % Branch 1 (top): Combined KV + ABS, then Xu-Net Conv
+  \node[block, right=0.45cm of in, yshift=0.85cm, text width=2.3cm] (kvabs) {Frozen $5\times5$ KV\\+ ABS Layer};
+  \node[block, right=0.35cm of kvabs, text width=1.9cm] (conv) {Xu-Net\\Conv Blocks};
 
-  \node[block, right=1.6cm of conv, yshift=-0.8cm, text width=1.8cm, draw=cpsamber, very thick, fill=cpsamber!10] (fusion) {\textbf{Late Fusion}\\$P(\text{stego} \mid \mathbf{I})$};
+  % Branch 2 (middle): LSB Transition
+  \node[block, right=0.45cm of in, text width=2.8cm] (lsb) {LSB Transition Rate $\mathcal{D}_h$};
 
-  \draw[arrowline] (in) |- (kv);
-  \draw[arrowline] (kv) -- (abs);
-  \draw[arrowline] (abs) -- (conv);
-  \draw[arrowline] (conv) -| node[above, font=\sffamily\tiny] {$p_{cnn}$\,} (fusion);
+  % Branch 3 (bottom): Signature Scan
+  \node[block, right=0.45cm of in, yshift=-0.85cm, text width=2.8cm] (sig) {Payload-Signature\\Scan $s_{sig}$};
+
+  % Late Fusion block directly adjacent to conv
+  \node[block, right=0.45cm of conv, yshift=-0.85cm, text width=1.7cm, draw=cpsamber, very thick, fill=cpsamber!10] (fusion) {\textbf{Late Fusion}\\$P(\text{stego} \mid \mathbf{I})$};
+
+  % Arrows
+  \draw[arrowline] (in) |- (kvabs);
+  \draw[arrowline] (kvabs) -- (conv);
+  \draw[arrowline] (conv) -| node[above, font=\sffamily\tiny] {$p_{cnn}$\,} (fusion.north);
 
   \draw[arrowline] (in) -- (lsb);
-  \draw[arrowline] (lsb) -- (fusion);
+  \draw[arrowline] (lsb) -- (fusion.west);
 
   \draw[arrowline] (in) |- (sig);
-  \draw[arrowline] (sig) -| (fusion);
+  \draw[arrowline] (sig) -| (fusion.south);
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{\textbf{Gate 2 detector.} A CNN branch with a frozen high-pass front end is fused with two bitplane-level signals.}
 \label{fig:detector}
 \end{figure}
