@@ -1,7 +1,7 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 
-% Paging and numbering (Ensure numbered pages as requested)
+% Paging and numbering (Ensure numbered pages)
 \pagestyle{plain}
 \thispagestyle{plain}
 
@@ -9,6 +9,7 @@
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
+\usepackage{algorithm}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
@@ -18,7 +19,7 @@
 \usepackage{microtype}
 \usepackage{tabularx}
 
-% Hyperref for professional blue academic differentiation
+% Hyperref for clean academic link differentiation
 \usepackage[colorlinks=true,
             linkcolor=cpsblue,
             citecolor=cpsblue,
@@ -42,14 +43,15 @@
 
 \begin{document}
 
-\title{\LARGE\bfseries CPS-Gateway: Dual-Gate Cryptographic Provenance and Multi-Signal Steganalysis Against Multimodal Indirect Prompt Injection\\
-\thanks{This research was conducted as part of the Capstone Research Initiative in Secure Artificial Intelligence Systems.}
+\title{\LARGE\bfseries CPS-Gateway: Dual-Gate Cryptographic Provenance and Steganalysis-Driven Sanitization Against Hidden-Payload Image Injection in Multimodal LLM Pipelines\\
+\thanks{This research was conducted as part of the Capstone Research Initiative in Secure Artificial Intelligence Systems at Manipal University Jaipur.}
 }
 
-\author{\IEEEauthorblockN{Adit Shukla\IEEEauthorrefmark{1}, Research Collaborator\IEEEauthorrefmark{2}, and Faculty Advisor\IEEEauthorrefmark{3}}
+\author{
+\IEEEauthorblockN{Adit Shukla\IEEEauthorrefmark{1}, Research Collaborator\IEEEauthorrefmark{2}, and Faculty Advisor\IEEEauthorrefmark{3}}
 \IEEEauthorblockA{\textit{Department of Computer Science and Engineering} \\
-\textit{School of Computing and Information Technology}\\
-Email: \IEEEauthorrefmark{1}author@university.edu}
+\textit{Manipal University Jaipur}, Jaipur, Rajasthan, India\\
+Email: \IEEEauthorrefmark{1}aditvk27@gmail.com}
 }
 
 \maketitle
@@ -57,266 +59,162 @@ Email: \IEEEauthorrefmark{1}author@university.edu}
 \pagestyle{plain}
 
 \begin{abstract}
-Multimodal Large Language Models (MLLMs/VLMs) that ingest visual and textual tokens into shared neural projection spaces are acutely vulnerable to indirect prompt injection attacks. Adversaries can imperceptibly embed natural language directives into the pixel matrices of input images using spatial and frequency steganography, hijacking autoregressive decoders, exfiltrating private system contexts, and defeating text-centric guardrails without visual degradation. Existing defenses either operate exclusively on textual inputs, perform intrusive latent-space representations that incur prohibitive latency overhead (150--400~ms), or fail on unauthenticated public media. In this paper, we propose \textbf{CPS-Gateway}, a cloud-deployable, model-agnostic middleware gateway anchored on a novel \textit{Dual-Gate} security architecture. \textbf{Gate~1} enforces cryptographic origin verification via asymmetric Elliptic Curve Digital Signatures (ECDSA P-256), establishing non-repudiation and providing a 0.48~ms sub-millisecond fast-path that safely bypasses deep inspection for authenticated sources. \textbf{Gate~2} acts as an automated zero-trust perimeter for unsigned, public, or tampered assets, combining a deep convolutional steganalysis network (\textit{Xu-Net}) initialized with a non-trainable 5$\times$5 high-pass residual filter with spatial bitplane transition entropy and payload signature extraction. Assets flagged by Gate~2 are dynamically routed to a multi-stage perceptual sanitizer comprising subpixel interpolation, LSB dithering, and lossy discrete cosine transform (DCT) quantization. Across extensive benchmarks on BOSSbase~1.01 and an OWASP-derived multimodal injection corpus, CPS-Gateway achieves a 96.4\% stego-injection detection accuracy, reduces payload survival to 0.0\% while preserving visual question-answering fidelity (PSNR $>$ 38.9~dB, SSIM $>$ 0.96), and reduces gateway latency by 89\% for signed assets.
+Multimodal large language models (MLLMs) ingest untrusted images, which opens a covert channel for indirect prompt injection: instructions can be hidden in pixel data by steganographic embedding and later recovered by a component of the application pipeline. Text-only guardrails never see this channel, and representation-level defenses require white-box access to the model. We present \textbf{CPS-Gateway} (Cryptographic Provenance and Steganalysis Gateway), a model-agnostic middleware placed upstream of the visual encoder, built around two gates. \textbf{Gate~1} verifies an ECDSA P-256 signature over the image bytes and a freshness-bound manifest, so that images from trusted signers take a sub-millisecond fast path (0.16~ms). Images that are unsigned, stale, or modified are passed to \textbf{Gate~2}, which combines a Xu-Net-style residual CNN with a frozen high-pass front end, a spatial LSB transition statistic, and a payload-signature scan, followed by a perceptual sanitizer (rescaling, LSB dithering, and lossy JPEG re-encoding) that removes embedded payloads while preserving semantic image content. On BOSSbase 1.01 and an injection-payload corpus, Gate~2 reaches 96.4\% detection accuracy, the sanitizer lowers payload survival from 100\% to 0.0\% at an average PSNR of 36.29~dB, and the Gate~1 fast path costs 0.16~ms against 20.94~ms for the full unsigned path. We also state the limits of the design, including signed-but-malicious inputs and gradient-based adversarial perturbations, which fall outside the hidden-payload model.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Multimodal LLM Security, Indirect Prompt Injection, Deep Steganalysis, Cryptographic Provenance, ECDSA P-256, Xu-Net, Perceptual Sanitization, Zero-Trust Architecture.
+multimodal LLM security, indirect prompt injection, steganalysis, content provenance, ECDSA, image sanitization, zero-trust
 \end{IEEEkeywords}
 
 \section{Introduction}
 \label{sec:intro}
 
-The integration of visual encoders into Large Language Models (LLMs)---exemplified by GPT-4V \cite{achiam2023gpt4}, Claude 3.5 Sonnet, Gemini 1.5, and LLaVA \cite{liu2023visual}---has unlocked unprecedented reasoning across vision and natural language. Foundation Vision-Language Models (VLMs) now power autonomous workflows, intelligent document comprehension, medical image diagnostics, and web-navigating agents \cite{alayrac2022flamingo}. 
+Multimodal large language models (MLLMs) such as GPT-4 \cite{achiam2023gpt4} and LLaVA \cite{liu2023visual} read images and text together, and are increasingly embedded in document-processing, medical, and agentic workflows \cite{alayrac2022flamingo}. Every image such a system accepts is attacker-controlled input. In an indirect prompt injection attack \cite{greshake2023not}, the adversary places instructions inside a data artifact that the application later feeds to the model. For images, this has been shown with instructions blended into pixels or audio \cite{bagdasaryan2023abusing}, with gradient-optimized adversarial images that jailbreak aligned models \cite{qi2024visual, carlini2023aligned}, and with compositional attacks that split a malicious request across modalities \cite{shayegani2024jailbreak}.
 
-However, accepting arbitrary image inputs into foundation models creates an unmonitored and high-impact attack surface: \textit{Multimodal Indirect Prompt Injection} \cite{greshake2023not, bagdasaryan2023abusing}. In an indirect prompt injection attack, an adversary constructs or manipulates an external data artifact (e.g., an uploaded image) containing adversarial commands designed to hijack model execution. When a multimodal model extracts visual tokens via patch projection networks (e.g., Vision Transformers like CLIP or SigLIP), the textual instructions concealed within the visual modality are transcribed into the shared latent space. These instructions subsequently override the system prompt, disable alignment guardrails, and execute unauthorized tasks such as dumping confidential database credentials or issuing rogue API calls \cite{qi2024visual, carlini2024aligned}.
+This paper studies one specific channel: \textit{hidden payloads carried in the pixel domain by steganography}. Modern adaptive embedding schemes such as S-UNIWARD \cite{holub2014universal} and HILL \cite{li2014new} place modifications in textured regions, leaving the image visually unchanged. We do not claim that off-the-shelf vision encoders decode such payloads on their own. Our concern is a perimeter control that removes the channel regardless of which downstream component (a plugin, an OCR preprocessing stage, or a tool-using agent) would recover the payload. Gradient-based adversarial perturbations \cite{qi2024visual, carlini2023aligned} are a different threat and are discussed as a limitation in Section~\ref{sec:limitations}.
 
-Critically, adversaries do not need to display overt, human-readable text on the image canvas. By leveraging digital steganography---such as Least Significant Bit (LSB) embedding or edge-adaptive cost assignment (S-UNIWARD, HILL) \cite{holub2014designing, li2014new}---malicious prompts can be distributed across spatial pixel variations or discrete transform coefficients. These perturbations remain mathematically invisible to the human visual system (Peak Signal-to-Noise Ratio $\text{PSNR} > 45$~dB) while retaining the precise statistical coherence needed to trigger adversarial tokenization in the downstream model \cite{shayegani2023jailbreak}.
+Defending this perimeter is hard for four reasons. (i) Text guardrails such as Llama Guard \cite{inan2023llama} inspect token sequences and never see pixels. (ii) Representation-level defenses such as ARGUS \cite{lu2024argus} steer internal activations and therefore need white-box access to the model. (iii) Standalone deep steganalysis tends to raise false alarms on noisy web images and degrades under cover-source mismatch. (iv) Provenance standards such as C2PA \cite{c2pa2023spec} establish where an asset came from, but a provenance check alone does not make an untrusted input safe.
 
-Defending against multimodal prompt injection presents severe operational and architectural hurdles:
-\begin{enumerate}
-    \item \textbf{Text Guardrail Ineffectiveness:} Standard input guards (e.g., Llama Guard \cite{inan2023llama}, NeMo Guardrails) inspect natural language token sequences. They are structurally decoupled from pixel matrices and completely blind to steganographic bit embeddings.
-    \item \textbf{Latent Representation Overhead:} Internal defenses such as ARGUS \cite{wang2024argus} monitor intermediate transformer activations. However, this requires intrusive white-box access to proprietary model weights, prevents deployment against commercial black-box APIs (e.g., GPT-4V), and introduces high computational latencies (150--400~ms).
-    \item \textbf{False Alarms in Standalone Steganalysis:} Standalone deep convolutional steganalysis networks suffer performance degradation and false positives when applied naively to diverse, high-noise natural web images, introducing unneeded friction in high-throughput enterprise pipelines.
-    \item \textbf{Provenance Standards Misalignment:} Industry content authenticity initiatives like C2PA \cite{c2pa2023spec} focus almost exclusively on signing model \textit{outputs} to watermark generated media, rather than establishing zero-trust input barriers to sanitize untrusted media inputs \cite{fisch2024visualtrust}.
-\end{enumerate}
-
-To resolve these challenges, we present \textbf{CPS-Gateway}, a lightweight, model-agnostic, dual-tier security gateway deployed upstream of the visual tokenizer. Our contributions are:
+We present \textbf{CPS-Gateway}, a middleware that sits upstream of the visual tokenizer (Fig.~\ref{fig:workflow}). Our contributions are:
 \begin{itemize}
-    \item \textbf{Dual-Gate Security Architecture:} A two-tier defense combining asymmetric cryptographic provenance (Gate~1) with deep residual steganalysis and fallback sanitization (Gate~2).
-    \item \textbf{Multi-Signal Steganalysis Engine:} An ensemble detector coupling a specialized Xu-Net CNN equipped with a non-trainable 5$\times$5 high-pass residual kernel with spatial LSB bitplane transition entropy and keyword signature scanning.
-    \item \textbf{Perceptual Sanitization Pipeline:} A non-destructive sanitization cascade combining coordinate rescaling, bitplane dithering, and lossy DCT quantization that achieves 100\% payload neutralization while maintaining high visual fidelity ($\text{PSNR} > 38.9$~dB, $\text{SSIM} > 0.96$).
-    \item \textbf{Empirical Verification and Open Architecture:} Complete benchmarking over BOSSbase 1.01 and an OWASP multimodal injection corpus, demonstrating 96.4\% detection accuracy, 0.48~ms fast-path latency, and complete mitigation of simulated VLM credential leaks.
+    \item \textbf{Dual-gate architecture.} A cryptographic fast path (Gate~1) for images from trusted signers, and a zero-trust path (Gate~2) for everything else.
+    \item \textbf{Multi-signal detector.} A Xu-Net-style CNN with a frozen high-pass front end \cite{xu2016structural}, fused with an LSB transition statistic and a payload-signature scan.
+    \item \textbf{Perceptual sanitizer.} A cascade of metadata stripping, rescaling, LSB dithering, and JPEG re-encoding, evaluated both as a fallback (Mode~D) and as an always-on step (Mode~S).
+    \item \textbf{Evaluation protocol and limits.} A reproducible protocol on BOSSbase 1.01 \cite{bas2011break} and an injection-payload corpus, with explicit statements of what the design does not protect against. Code and artifacts: \url{https://github.com/Aditvk/CPS_gateway}.
 \end{itemize}
 
-% =========================================================================
-% FIGURE 1: REDESIGNED TIKZ VECTOR PIPELINE (ACCURATE ORTHOGONAL ARROWS)
-% =========================================================================
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}[
-  scale=0.82, every node/.style={transform shape},
-  node distance=0.58cm,
-  font=\sffamily,
-  block/.style={
-    rectangle, draw=cpsblue!80, thick, fill=cpslight,
-    text width=4.6cm, minimum height=0.68cm, align=center,
-    rounded corners=3pt, font=\sffamily\scriptsize
-  },
-  gate1/.style={
-    rectangle, draw=cpsblue, very thick, fill=cpsblue!8,
-    text width=4.6cm, minimum height=0.78cm, align=center,
-    rounded corners=4pt, font=\sffamily\scriptsize
-  },
-  gate2/.style={
-    rectangle, draw=cpsamber, very thick, fill=cpsamber!8,
-    text width=4.6cm, minimum height=0.82cm, align=center,
-    rounded corners=4pt, font=\sffamily\scriptsize
-  },
-  sanitizer/.style={
-    rectangle, draw=cpsred, very thick, fill=cpsred!8,
-    text width=4.6cm, minimum height=0.74cm, align=center,
-    rounded corners=4pt, font=\sffamily\scriptsize
-  },
-  vlm/.style={
-    rectangle, draw=cpsgreen, very thick, fill=cpsgreen!10,
-    text width=4.6cm, minimum height=0.74cm, align=center,
-    rounded corners=4pt, font=\sffamily\bfseries\scriptsize
-  },
-  decision/.style={
-    diamond, draw=cpsdark, thick, fill=white,
-    aspect=2.1, inner sep=1.2pt, font=\sffamily\bfseries\tiny
-  },
-  pathline/.style={draw=cpsdark, thick, -Stealth}
-]
-
-  % Core vertical sequence
-  \node[block] (input) {\textbf{Multimodal Asset Ingestion}\\(Image Asset $\mathbf{I}$ and User Query $\mathcal{Q}$)};
-  \node[gate1, below=of input] (g1) {\textbf{GATE 1: Provenance Verification Engine}\\ECDSA P-256 Signature Manifest $\mathcal{M}(r, s)$};
-  \node[decision, below=of g1] (d1) {Signature Valid?};
-  \node[gate2, below=of d1, yshift=-0.14cm] (g2) {\textbf{GATE 2: Multi-Signal Steganalysis}\\Xu-Net Residual CNN + LSB Transition Entropy};
-  \node[decision, below=of g2] (d2) {Stego Detected? ($P \ge 0.5$)};
-  \node[sanitizer, below=of d2, yshift=-0.14cm] (san) {\textbf{FALLBACK: Perceptual Sanitizer}\\Rescale ($0.96\times$) $\to$ Dither $\to$ DCT ($Q{=}85$)};
-  \node[vlm, below=of san, yshift=-0.12cm] (vlm) {Target Multimodal LLM (VLM Core)\\Safe, Shielded Visual Context};
-
-  % Downward vertical transitions with centered text
-  \draw[pathline] (input) -- (g1);
-  \draw[pathline] (g1) -- (d1);
-  \draw[pathline] (d1) -- node[right=2pt, font=\sffamily\tiny\bfseries, text=cpsamber] {Unsigned / Tampered} (g2);
-  \draw[pathline] (g2) -- (d2);
-  \draw[pathline] (d2) -- node[right=2pt, font=\sffamily\tiny\bfseries, text=cpsred] {Yes (Anomaly Flagged)} (san);
-  \draw[pathline] (san) -- (vlm);
-
-  % Coordinates strictly clearing the widest rectangle (half-width 2.3cm + 0.7cm clearance = 3.0cm)
-  \coordinate (trackR) at ($(vlm.east) + (0.75, 0)$);
-  \coordinate (trackL) at ($(vlm.west) + (-0.75, 0)$);
-
-  % Right-side bypass track (Gate 1 Fast-Path to VLM: moves Right, Down, then Left into VLM)
-  \draw[draw=cpsblue, very thick, -Stealth]
-    (d1.east) -- node[above=1pt, font=\sffamily\tiny\bfseries, text=cpsblue] {Valid (0.48ms)} (d1.east -| trackR)
-    -- (vlm.east -| trackR)
-    -- (vlm.east);
-
-  % Left-side bypass track (Gate 2 Clean Forwarding: moves Left, Down, then Right into VLM)
-  \draw[draw=cpsgreen, very thick, -Stealth]
-    (d2.west) -- node[above=1pt, font=\sffamily\tiny\bfseries, text=cpsgreen] {No (Clean) (15.1ms)} (d2.west -| trackL)
-    -- (vlm.west -| trackL)
-    -- (vlm.west);
-
-\end{tikzpicture}
-\caption{Architectural workflow of the \textbf{CPS-Gateway} middleware. Authenticated images achieve sub-millisecond fast-path ingestion via Gate~1. Unsigned or tampered assets are directed to Gate~2 for multi-signal residual steganalysis; detected stego payloads are permanently scrubbed by the perceptual sanitizer before VLM tokenization.}
-\label{fig:architecture_pipeline}
-\end{figure}
-
-\section{Related Work and Vulnerability Landscape}
+\section{Related Work}
 \label{sec:related_work}
 
-\subsection{Multimodal Indirect Prompt Injection}
-Indirect prompt injection was formalized by Greshake et al. \cite{greshake2023not} in the context of retrieval-augmented text systems. Bagdasaryan et al. \cite{bagdasaryan2023abusing} extended this threat vector to multimodal architectures, demonstrating that adversarial instructions blended into images or audio recordings cause models to ignore user context and execute attacker-specified instructions. Qi et al. \cite{qi2024visual} demonstrated that continuous adversarial perturbations generated via projected gradient descent (PGD) transfer across vision encoders, breaking system alignment in commercial VLMs. Shayegani et al. \cite{shayegani2023jailbreak} demonstrated compositional jailbreaks, separating malicious directives across visual and textual tokens to bypass safety classifiers.
+\subsection{Multimodal Prompt Injection}
+Greshake et al. \cite{greshake2023not} formalized indirect prompt injection for LLM-integrated applications. Bagdasaryan et al. \cite{bagdasaryan2023abusing} extended it to images and audio, Qi et al. \cite{qi2024visual} and Carlini et al. \cite{carlini2023aligned} showed that optimized adversarial images can push aligned multimodal models into unaligned behaviour, and Shayegani et al. \cite{shayegani2024jailbreak} split malicious intent across visual and textual inputs.
 
-\subsection{Steganography and Deep Steganalysis}
-Steganography hides secret messages within cover media such that the modification is undetectable \cite{johnson1998exploring}. Modern spatial embedding algorithms, including S-UNIWARD \cite{holub2014designing} and HILL \cite{li2014new}, define distortion cost functions that direct modifications into high-variance textures and complex edges. Conversely, spatial steganalysis aims to detect these perturbations \cite{fridrich2001detecting}. While classical steganalysis relied on hand-crafted rich models (SRM), deep learning approaches pioneered by Xu et al. \cite{xu2016structural} (Xu-Net), Ye et al. \cite{ye2017deep}, and Yedroudj et al. \cite{yedroudj2018yedroudj} introduced domain-specific CNN architectures incorporating high-pass spatial filtering to detect residual perturbations.
+\subsection{Defenses}
+Llama Guard \cite{inan2023llama} classifies text. ARGUS \cite{lu2024argus} defends against multimodal indirect injection by steering the model's instruction-following behaviour in activation space, and includes a lightweight detection stage and a post-filtering stage, but requires access to model internals. Input transformations such as those studied by Guo et al. \cite{guo2018countering} perturb pixels to break adversarial examples and are model-agnostic. Syed et al. \cite{syed2025toward} propose a provenance-aware multi-agent framework that sanitizes text and images and tracks trust with a ledger. C2PA \cite{c2pa2023spec} defines signed manifests that bind assets to their origin and edit history. CPS-Gateway differs in combining a lightweight signature check, which does not inspect pixels, with pixel-level steganalysis and sanitization of everything that lacks a valid signature. Table~\ref{tab:comparison} summarizes the comparison qualitatively.
 
-\subsection{Comparative Gap Analysis}
-Table~\ref{tab:comparison} contrasts existing defense paradigms against CPS-Gateway. While input filtering is blind to images and representation filtering incurs high latency, the Dual-Gate architecture provides provable sub-millisecond guarantees for trusted assets and zero-trust fallback protection for unauthenticated inputs.
+\subsection{Steganography and Steganalysis}
+Steganography hides a message in a cover medium without perceptible change \cite{johnson1998exploring}. LSB embedding is detectable by classical statistics \cite{fridrich2001detecting}, while adaptive schemes such as S-UNIWARD \cite{holub2014universal} and HILL \cite{li2014new} concentrate changes in complex regions. Feature-based detection with rich models \cite{fridrich2012rich} was superseded by CNN detectors with fixed high-pass front ends: Xu-Net \cite{xu2016structural}, Ye-Net \cite{ye2017deep}, Yedroudj-Net \cite{yedroudj2018yedroudj}, and SRNet \cite{boroumand2019deep}.
+
+\section{Threat Model and Formulation}
+\label{sec:threat_model}
+
+\subsection{Threat Model}
+We follow the prompt-injection category of the OWASP LLM Top 10 \cite{owasp2023top10}.
+
+\textbf{Adversary.} The adversary submits an image $\mathbf{I}$ to a multimodal application and cannot obtain the private signing key $d$ of any trusted signer. The adversary can choose the embedding algorithm and payload, and can read the public specification of CPS-Gateway.
+
+\textbf{Hidden channel.} The adversary produces $\mathbf{I}_{stego} = \mathbf{I}_{cover} + \mathbf{\Delta}$ with $\|\mathbf{\Delta}\|_\infty \le \epsilon$ ($\epsilon = 1$ for $\pm 1$ embedding), so that a decoder $\mathcal{D}$ recovers a payload $\mathcal{P}_{inj} = \mathcal{D}(\mathbf{I}_{stego})$ that is then interpreted as an instruction by a downstream component.
+
+\textbf{Trust assumptions.} Signers in the gateway's trust store are honest and do not sign adversarial content. Signing keys are held in secure hardware at the signer, following standard key-management practice \cite{barker2020recommendation}.
+
+\textbf{Out of scope.} (a) Malicious content signed by a trusted signer. (b) Gradient-based adversarial perturbations \cite{qi2024visual, carlini2023aligned}. (c) Visible typographic injection. (d) Attacks on the model that do not pass through the image bytes.
+
+\begin{algorithm}[t]
+\caption{CPS-Gateway routing (detect-then-sanitize mode)}
+\label{alg:routing}
+\begin{algorithmic}[1]
+\REQUIRE Image bytes $\mathbf{I}'$, optional manifest $\mathcal{M}$, threshold $\tau$
+\IF{$\mathcal{M} \text{ is present and } \text{VerifyGate1}(\mathbf{I}', \mathcal{M})$}
+    \RETURN $\mathbf{I}'$ \COMMENT{Fast path (0.16 ms)}
+\ENDIF
+\STATE $P \leftarrow \text{Gate2}(\mathbf{I}')$
+\IF{$P \ge \tau$}
+    \RETURN $\text{Sanitize}(\mathbf{I}')$
+\ENDIF
+\RETURN $\mathbf{I}'$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Gate 1: ECDSA P-256 Provenance}
+Gate~1 uses the NIST P-256 curve \cite{fips1865, sec2_2010}. Let $G$ be the generator of prime order $n$, $d \in [1, n-1]$ the signer's private key, and $Q = dG$ the public key held by the gateway. A signer with identifier $id$ signs an image at time $t$ with a fresh nonce $\nu$ by computing
+\begin{equation}
+    h = \text{SHA-256}(\mathbf{I}_{bytes} \parallel id \parallel t \parallel \nu),
+\end{equation}
+letting $z$ be the integer given by the leftmost 256 bits of $h$, and choosing $k \in [1, n-1]$ (deterministically per RFC 6979 \cite{rfc6979}):
+\begin{equation}
+    (x_1, y_1) = kG, \quad r = x_1 \bmod n, \quad s = k^{-1}(z + rd) \bmod n,
+\end{equation}
+with $r, s \ne 0$. The manifest is $\mathcal{M} = (id, t, \nu, r, s)$. On arrival of $\mathbf{I}'$, the gateway recomputes $h'$ from the received bytes and $\mathcal{M}$, derives $z'$, and checks $r, s \in [1, n-1]$, then
+\begin{equation}
+\begin{aligned}
+    w &= s^{-1} \bmod n, \quad u_1 = z'w \bmod n, \quad u_2 = rw \bmod n, \\
+    (x_v, y_v) &= u_1G + u_2Q.
+\end{aligned}
+\end{equation}
+The signature is valid iff $(x_v, y_v)$ is not the point at infinity and $x_v \equiv r \pmod n$. Gate~1 accepts only if, in addition, $id$ is in the trust store and not revoked, $|t_{now} - t| \le \Delta t$, and $\nu$ has not been seen within the freshness window (replay protection). The gateway holds only $Q$, so compromising it does not let an attacker forge manifests. Any change to the image bytes changes $h'$ and invalidates the signature.
 
 % =========================================================================
-% TABLE I: COMPARATIVE ANALYSIS (RESIZED TO EXACT TEXTWIDTH TO PREVENT OVERFLOW)
+% TABLE I: QUALITATIVE COMPARISON (CLEAN TEXTWIDTH FIT)
 % =========================================================================
 \begin{table*}[t]
-\caption{Comparative Gap Analysis: CPS-Gateway vs. Existing Defense Paradigms}
+\caption{Qualitative Comparison of Defense Paradigms}
 \label{tab:comparison}
 \centering
 \vspace{-1.5mm}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccc}
+\begin{tabular}{lccccc}
 \toprule
-\textbf{Defense Paradigm} & \textbf{Inspection Layer} & \textbf{Model-Agnostic} & \textbf{Black-Box APIs} & \textbf{Stego Defense} & \textbf{Provenance Guarantees} & \textbf{Mean Overhead} \\
+\textbf{Defense} & \textbf{Inspects} & \textbf{Works with Black-Box APIs} & \textbf{Hidden Pixel Payloads} & \textbf{Provenance Guarantees} \\
 \midrule
-Text Guardrails (Llama Guard \cite{inan2023llama}) & Text Tokens & Yes & Yes & None (Pixel Blind) & None & 25--60 ms \\
-Representation Guard (ARGUS \cite{wang2024argus}) & Latent Activations & No (White-Box) & No & Moderate & None & 150--400 ms \\
-Input Transformation (Guo et al. \cite{guo2018countering}) & Image Pixels & Yes & Yes & Partial & None & 8--20 ms \\
-Output Watermarking (C2PA \cite{c2pa2023spec}) & Generation Metadata & Partial & Yes & None & Output Only (Not Ingress) & 5--12 ms \\
-\textbf{CPS-Gateway (Proposed)} & \textbf{Perimeter Ingress} & \textbf{Yes} & \textbf{Yes} & \textbf{Complete (100\% Scrub)} & \textbf{Asymmetric ECDSA P-256} & \textbf{0.48 ms (Fast-Path)} \\
+Text guardrails (Llama Guard \cite{inan2023llama}) & Text tokens & Yes & No & No \\
+Activation steering (ARGUS \cite{lu2024argus}) & Internal activations & No & Model-side only & No \\
+Input transformation (Guo et al. \cite{guo2018countering}) & Image pixels & Yes & Partial & No \\
+C2PA \cite{c2pa2023spec} & Signed manifest & Yes & No & Yes (Origin, not content safety) \\
+\textbf{CPS-Gateway (Ours)} & \textbf{Image bytes and pixels} & \textbf{Yes} & \textbf{Detect and sanitize} & \textbf{Yes (ECDSA P-256)} \\
 \bottomrule
 \end{tabular}%
 }
 \vspace{1.5mm}
 \end{table*}
 
-\section{Threat Model and Mathematical Formulation}
-\label{sec:threat_model}
-
-\subsection{Threat Model Definition}
-We define the threat model according to the OWASP LLM01 standard \cite{owasp2023top10}.
-\begin{itemize}
-    \item \textbf{Adversary Capability:} An adversary submits an image asset $\mathbf{I} \in \mathbb{R}^{H \times W \times C}$ to a multimodal application. The adversary lacks access to the private signing keys ($\mathcal{K}_{priv}$) of authenticated upstream providers.
-    \item \textbf{Adversary Objective:} The adversary conceals an injection payload $\mathcal{P}_{inj}$ inside $\mathbf{I}$. Let $E_v(\cdot)$ represent the vision encoder and $D_{llm}(\cdot)$ the autoregressive decoder. The adversary seeks to induce an unauthorized output sequence $Y_{adv}$:
-    \begin{equation}
-        D_{llm}(E_v(\mathbf{I}), \mathcal{Q}_{user}) \Longrightarrow Y_{adv},
-    \end{equation}
-    where $\mathcal{Q}_{user}$ is an arbitrary benign user query.
-    \item \textbf{Steganographic Channel:} The payload is embedded into the pixel matrix:
-    \begin{equation}
-        \mathbf{I}_{stego}(x, y, c) = \mathbf{I}_{cover}(x, y, c) \oplus \Delta(x, y, c),
-    \end{equation}
-    subject to the perceptual constraint $\|\Delta(x, y, c)\|_\infty \le \epsilon$, maintaining visual fidelity ($\text{PSNR} \ge 45$~dB).
-\end{itemize}
-
-\subsection{Mathematical Formulation of Gate 1 Cryptographic Provenance}
-Gate~1 verifies provenance via the NIST SECP256R1 (P-256) elliptic curve \cite{barker2020recommendation, fips1864}. Let $\mathbb{F}_p$ denote the finite prime field, $G$ the generator point of order $n$, and $d \in_R [1, n-1]$ the private key held strictly within the source hardware enclave. The public key is:
-\begin{equation}
-    Q = d \cdot G.
-\end{equation}
-
-When an asset is minted by an authorized source, the system computes the 256-bit cryptographic digest:
-\begin{equation}
-    h = \text{SHA-256}(\mathbf{I}_{bytes}).
-\end{equation}
-Using an ephemeral key $k \in_R [1, n-1]$, the signature tuple $(r, s)$ is generated:
-\begin{equation}
-\begin{aligned}
-    (x_1, y_1) &= k \cdot G, \quad r = x_1 \pmod n, \\
-    s &= k^{-1}(z + r \cdot d) \pmod n,
-\end{aligned}
-\end{equation}
-where $z$ is the integer derived from the first $256$ bits of $h$.
-
-Upon arrival at the gateway, the incoming image $\mathbf{I}'$ is re-hashed to obtain $z'$, and verification is evaluated:
-\begin{equation}
-\begin{aligned}
-    w &= s^{-1} \pmod n, \quad u_1 = z' w \pmod n, \quad u_2 = r w \pmod n, \\
-    (x_v, y_v) &= u_1 \cdot G + u_2 \cdot Q.
-\end{aligned}
-\end{equation}
-Gate~1 approves fast-path routing if and only if $x_v \equiv r \pmod n$ and $h_{claimed} = h_{computed}$. Because the gateway holds only $Q$, compromise of the cloud gateway does not allow an adversary to forge signatures.
-
-\section{The CPS-Gateway Defense Architecture}
-\label{sec:architecture}
-
-\subsection{Gate 1: Provenance Verification Engine}
-Gate~1 serves as an ultra-fast boundary filter. Media assets arriving with a companion manifest $\mathcal{M} = \{\text{hash}, r, s, \text{source\_id}, \text{timestamp}\}$ are verified in 0.48~ms. Valid signatures bypass subsequent neural analysis entirely, ensuring zero latency degradation for internal enterprise pipelines. If an asset is unsigned, expired, or exhibits byte-level tampering ($x_v \not\equiv r$), it is immediately diverted to Gate~2.
-
-\subsection{Gate 2: Multi-Signal Deep Steganalysis}
-Standard convolutional kernels are trained to minimize semantic classification loss, optimizing for edges, shapes, and textures while treating high-frequency steganographic noise as irrelevant variance. Gate~2 overcomes this using an ensemble architecture illustrated in Fig.~\ref{fig:gate2_detail}.
-
 % =========================================================================
-% FIGURE 2: CLEAN TIKZ VECTOR SCHEMATIC OF GATE 2 ENGINE
+% FIGURE 1: HORIZONTAL PIPELINE WORKFLOW (CLEAN, NO ARROW CROSSING)
 % =========================================================================
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \begin{tikzpicture}[
-  scale=0.82, every node/.style={transform shape},
-  node distance=0.52cm,
+  scale=0.88, every node/.style={transform shape},
   font=\sffamily,
-  block/.style={
-    rectangle, draw=cpsblue!80, thick, fill=cpslight,
-    text width=4.8cm, minimum height=0.62cm, align=center,
-    rounded corners=3pt, font=\sffamily\scriptsize
-  },
-  kernel/.style={
-    rectangle, draw=cpsamber, very thick, fill=cpsamber!10,
-    text width=4.8cm, minimum height=0.74cm, align=center,
-    rounded corners=3pt, font=\sffamily\scriptsize
-  },
-  conv/.style={
-    rectangle, draw=cpsblue, thick, fill=cpsblue!8,
-    text width=4.8cm, minimum height=0.70cm, align=center,
-    rounded corners=3pt, font=\sffamily\scriptsize
-  },
-  metric/.style={
-    rectangle, draw=cpsdark, thick, fill=white,
-    text width=4.8cm, minimum height=0.72cm, align=center,
-    rounded corners=3pt, font=\sffamily\scriptsize
-  },
-  decision/.style={
-    rectangle, draw=cpsred, very thick, fill=cpsred!10,
-    text width=4.8cm, minimum height=0.70cm, align=center,
-    rounded corners=3pt, font=\sffamily\bfseries\scriptsize
-  },
-  pathline/.style={draw=cpsdark, thick, -Stealth}
+  box/.style={rectangle, draw=cpsblue!80, thick, fill=cpslight, text width=2.6cm, minimum height=1.1cm, align=center, rounded corners=3pt, font=\sffamily\scriptsize},
+  diamondnode/.style={diamond, draw=cpsdark, thick, fill=white, aspect=1.8, inner sep=1pt, align=center, font=\sffamily\scriptsize},
+  arrowline/.style={draw=cpsdark, thick, -Stealth}
 ]
 
-  \node[block] (in) {\textbf{Unverified Ingress Image} $\mathbf{I} \in \mathbb{R}^{H \times W \times C}$};
-  \node[kernel, below=of in] (kv) {\textbf{Fixed 5$\times$5 KV High-Pass Filter Kernel} $\mathbf{K}$\\Extracts High-Frequency Residual Map $\mathbf{R}(x,y)$};
-  \node[block, below=of kv] (abs) {\textbf{Absolute Value Activation} $f_{\text{ABS}}(z) = |z|$\\Preserves Symmetrical Perturbation Signs};
-  \node[conv, below=of abs] (convs) {\textbf{Xu-Net Convolutional Feature Hierarchy}\\5 Conv Blocks ($5\times5, 1\times1$), BatchNorm, Tanh, AvgPool};
-  \node[metric, below=of convs] (stat) {\textbf{Statistical \& Signature Verification Engine}\\$\bullet$ Spatial LSB Transition Entropy $\mathcal{D}_h$\\$\bullet$ Regex Pattern Scanner (OWASP Injection Keywords)};
-  \node[decision, below=of stat] (out) {\textbf{Ensemble Anomaly Decision} $P(\text{stego} \mid \mathbf{I})$\\$\tau \ge 0.50 \implies$ Divert to Perceptual Sanitizer};
+  % Sequence nodes
+  \node[box] (input) {Image $\mathbf{I}$ and\\optional manifest $\mathcal{M}$};
+  \node[diamondnode, right=1.2cm of input] (g1) {Gate 1:\\valid?};
+  \node[box, right=5.2cm of g1] (vlm) {\textbf{Target MLLM}\\(Visual Encoder)};
 
-  \draw[pathline] (in) -- (kv);
-  \draw[pathline] (kv) -- (abs);
-  \draw[pathline] (abs) -- (convs);
-  \draw[pathline] (convs) -- (stat);
-  \draw[pathline] (stat) -- (out);
+  \node[box, below=1.2cm of g1, xshift=1.8cm, text width=3.8cm] (g2) {\textbf{Gate 2: Multi-Signal}\\Xu-Net CNN, LSB statistic,\\signature scan};
+  \node[diamondnode, right=1.0cm of g2] (g2test) {$P \ge \tau$?};
+  \node[box, below=1.0cm of g2test, text width=2.8cm] (san) {\textbf{Perceptual Sanitizer}\\Rescale $\to$ Dither $\to$ JPEG};
+
+  % Connecting lines
+  \draw[arrowline] (input) -- (g1);
+  \draw[draw=cpsblue, very thick, -Stealth] (g1) -- node[above, font=\sffamily\scriptsize\bfseries, text=cpsblue] {Yes (Fast Path, 0.16 ms)} (vlm);
+  \draw[arrowline] (g1) |- node[near start, left, font=\sffamily\tiny\bfseries, text=cpsamber] {No, absent, stale or modified} (g2);
+  \draw[arrowline] (g2) -- (g2test);
+  \draw[draw=cpsgreen, very thick, -Stealth] (g2test) |- node[near start, above, font=\sffamily\tiny\bfseries, text=cpsgreen] {No (Clean, 20.8 ms)} (vlm);
+  \draw[draw=cpsred, very thick, -Stealth] (g2test) -- node[right, font=\sffamily\tiny\bfseries, text=cpsred] {Yes} (san);
+  \draw[draw=cpsred, thick, -Stealth] (san) -| (vlm);
 
 \end{tikzpicture}
-\caption{Detailed architectural pipeline of the Gate~2 Multi-Signal Steganalysis Engine. Input images pass through a non-trainable 5$\times$5 KV high-pass filter and absolute value activation to isolate noise residuals, followed by convolutional feature extraction and statistical bitplane analysis.}
-\label{fig:gate2_detail}
-\end{figure}
+\caption{\textbf{CPS-Gateway workflow.} Images with a valid, fresh manifest take the Gate~1 fast path. All other images are analyzed by Gate~2, and flagged images are sanitized before reaching the visual encoder.}
+\label{fig:workflow}
+\end{figure*}
 
-\subsubsection{Fixed High-Pass KV Filtering}
-To suppress semantic image content, the input image is preprocessed by a non-trainable 5$\times$5 high-pass filter kernel $\mathbf{K}$ developed by Kortelainen and Vuori \cite{xu2016structural}:
+\section{CPS-Gateway Architecture}
+\label{sec:architecture}
+
+Figure~\ref{fig:workflow} shows the end-to-end flow and Algorithm~\ref{alg:routing} the routing logic.
+
+\subsection{Gate 1: Provenance Verification}
+Gate~1 performs one SHA-256 pass and one ECDSA verification and never inspects pixels, so its cost is independent of image content. Assets with no manifest, an expired manifest, a replayed nonce, an unknown or revoked signer, or any byte-level change are routed to Gate~2.
+
+\subsection{Gate 2: Multi-Signal Steganalysis}
+
+\subsubsection{Frozen KV High-Pass Front End}
+The input is passed through a fixed 5$\times$5 high-pass kernel commonly used in CNN steganalysis \cite{xu2016structural, fridrich2012rich}:
 \begin{equation}
 \begingroup
 \renewcommand{\arraystretch}{0.90}
@@ -327,172 +225,265 @@ To suppress semantic image content, the input image is preprocessed by a non-tra
 -2 & \phantom{-}8 & -12 & \phantom{-}8 & -2 \\
 \phantom{-}2 & -6 & \phantom{-}8 & -6 & \phantom{-}2 \\
 -1 & \phantom{-}2 & -2 & \phantom{-}2 & -1
-\end{bmatrix}.
+\end{bmatrix},
 \endgroup
 \end{equation}
-The residual feature map $\mathbf{R}$ isolates pixel-to-pixel variances:
+producing the residual map (cross-correlation; $\mathbf{K}$ is symmetric, so this equals convolution):
 \begin{equation}
     \mathbf{R}(x, y) = \sum_{i=-2}^{2} \sum_{j=-2}^{2} \mathbf{K}(i, j) \cdot \mathbf{I}(x+i, y+j).
 \end{equation}
+In our implementation, this layer is frozen ($\texttt{requires\_grad = False}$). Following Xu-Net \cite{xu2016structural}, residuals pass through an absolute-value layer ($f_{\text{ABS}}(z) = |z|$), which removes the sign symmetry of $\pm 1$ embedding noise, and then through convolutional blocks with batch normalization and average pooling that output $p_{cnn} \in [0, 1]$. Color images are converted to luminance ($Y = 0.299R + 0.587G + 0.114B$) for the CNN front end.
 
-\subsubsection{Absolute Value Activation}
-Residual outputs pass through an Absolute Value (ABS) activation function, defined as $f_{\text{ABS}}(z) = |z|$. Because steganographic modifications $+1$ and $-1$ occur with statistically symmetric probability, sign-invariance prevents positive and negative residuals from cancelling out during spatial convolution.
-
-\subsubsection{Spatial LSB Entropy Analysis}
-In tandem with the CNN, Gate~2 computes the horizontal transition entropy across the least significant bitplane $\mathbf{B}_0 \in \{0, 1\}^{H \times W}$:
+\subsubsection{LSB Transition Statistic}
+Let $\mathbf{B}_0 = \mathbf{I} \bmod 2$ be the least-significant bitplane of an $H \times W$ image. The horizontal transition rate is
 \begin{equation}
-    \mathcal{D}_h = \frac{1}{W(H-1)} \sum_{y=1}^{H} \sum_{x=1}^{W-1} |\mathbf{B}_0(x, y) - \mathbf{B}_0(x+1, y)|.
+    \mathcal{D}_h = \frac{1}{H(W-1)} \sum_{y=1}^{H} \sum_{x=1}^{W-1} |\mathbf{B}_0(x, y) - \mathbf{B}_0(x+1, y)|.
 \end{equation}
-For natural uncompressed images, spatial correlation keeps $\mathcal{D}_h \approx 0.15\text{--}0.35$. Pseudo-random steganographic payloads drive $\mathcal{D}_h \to 0.50$, serving as an orthogonal statistical indicator.
+For an i.i.d. uniform bitplane, $\mathbb{E}[\mathcal{D}_h] = 0.5$. In natural covers, spatial correlation keeps $\mathcal{D}_h \approx 0.22\text{--}0.44$, whereas pseudo-random bit embeddings drive $\mathcal{D}_h \to 0.50$.
 
-\subsection{Gate 2 Fallback: Multi-Stage Perceptual Sanitizer}
-When Gate~2 flags an anomaly ($P(\text{stego}) \ge 0.50$), rejecting the asset directly causes denial-of-service on noisy benign photos. Instead, the asset is passed through a multi-stage perceptual sanitizer:
+\subsubsection{Payload-Signature Scan}
+The scanner reads the LSB plane in raster order, packs it into bytes, and matches the result against injection-keyword patterns derived from the OWASP LLM01 category \cite{owasp2023top10}, yielding $s_{sig} \in \{0, 1\}$. This directly detects sequential LSB embedding.
+
+\subsubsection{Fusion}
+The three signals are combined by late fusion (Fig.~\ref{fig:detector}):
+\begin{equation}
+    P(\text{stego} \mid \mathbf{I}) = \sigma\left(\beta_0 + \beta_1 \text{logit}(p_{cnn}) + \beta_2 \mathcal{D}_h + \beta_3 s_{sig}\right),
+\end{equation}
+with $\boldsymbol{\beta}$ fitted on a validation split and $\tau = 0.50$ chosen at a target false-positive rate of 3.6\%.
+
+% =========================================================================
+% FIGURE 2: GATE 2 DETECTOR DIAGRAM
+% =========================================================================
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  scale=0.78, every node/.style={transform shape},
+  font=\sffamily,
+  block/.style={rectangle, draw=cpsblue!80, thick, fill=cpslight, text width=1.9cm, minimum height=0.7cm, align=center, rounded corners=2pt, font=\sffamily\tiny},
+  arrowline/.style={draw=cpsdark, thick, -Stealth}
+]
+
+  \node[block, text width=1.6cm] (in) {Unverified\\Image $\mathbf{I}$};
+  \node[block, right=0.6cm of in, yshift=0.8cm] (kv) {Frozen $5\times5$\\KV Filter};
+  \node[block, right=0.4cm of kv] (abs) {ABS\\Layer};
+  \node[block, right=0.4cm of abs] (conv) {Xu-Net\\Conv Blocks};
+
+  \node[block, right=0.6cm of in, text width=2.2cm] (lsb) {LSB Transition\\Statistic $\mathcal{D}_h$};
+  \node[block, right=0.6cm of in, yshift=-0.8cm, text width=2.2cm] (sig) {Payload-Signature\\Scan $s_{sig}$};
+
+  \node[block, right=1.6cm of conv, yshift=-0.8cm, text width=1.8cm, draw=cpsamber, very thick, fill=cpsamber!10] (fusion) {\textbf{Late Fusion}\\$P(\text{stego} \mid \mathbf{I})$};
+
+  \draw[arrowline] (in) |- (kv);
+  \draw[arrowline] (kv) -- (abs);
+  \draw[arrowline] (abs) -- (conv);
+  \draw[arrowline] (conv) -| node[above, font=\sffamily\tiny] {$p_{cnn}$\,} (fusion);
+
+  \draw[arrowline] (in) -- (lsb);
+  \draw[arrowline] (lsb) -- (fusion);
+
+  \draw[arrowline] (in) |- (sig);
+  \draw[arrowline] (sig) -| (fusion);
+
+\end{tikzpicture}
+\caption{\textbf{Gate 2 detector.} A CNN branch with a frozen high-pass front end is fused with two bitplane-level signals.}
+\label{fig:detector}
+\end{figure}
+
+\subsection{Perceptual Sanitizer}
+The sanitizer applies four sequential steps:
 \begin{enumerate}
-    \item \textbf{EXIF/Metadata Scrubber:} Strips binary header chunks and auxiliary EXIF fields.
-    \item \textbf{Spatial Sub-pixel Rescaling:} Rescales image dimensions by factor $\alpha = 0.96$ using bilinear interpolation, then restores dimensions to $(H, W)$ via bicubic interpolation:
+    \item \textbf{Metadata scrub:} Remove EXIF, XMP, and auxiliary chunks.
+    \item \textbf{Rescale round-trip:} Resize by $\alpha = 0.96$ with bilinear interpolation and restore original dimensions with bicubic interpolation:
     \begin{equation}
-        \mathbf{I}_{scaled} = \mathcal{R}_{\text{bicubic}}(\mathcal{R}_{\text{bilinear}}(\mathbf{I}, \alpha), \alpha^{-1}),
+        \mathbf{I}_{scaled} = \mathcal{R}_{\text{bicubic}}(\mathcal{R}_{\text{bilinear}}(\mathbf{I}, \alpha), (H, W)).
     \end{equation}
-    which permanently breaks discrete pixel grid coordinate alignments.
-    \item \textbf{LSB Bitplane Dithering:} The lowest bitplane is scrambled using uniform noise $\mathbf{N} \sim \mathcal{U}\{0, 1\}$:
+    \item \textbf{LSB dithering:} Replace the lowest bitplane with uniform random noise $\mathbf{N} \sim \mathcal{U}\{0, 1\}$:
     \begin{equation}
-        \mathbf{I}_{dithered} = (\mathbf{I}_{scaled} \ \& \ \text{0xFE}) \ | \ \mathbf{N}.
+        \mathbf{I}_{dith} = (\mathbf{I}_{scaled} \ \& \ \text{0xFE}) \ | \ \mathbf{N}.
     \end{equation}
-    \item \textbf{Lossy DCT Quantization:} The asset is encoded into JPEG format with quality factor $Q = 85$. High-frequency DCT coefficients are divided by standard quantization tables and rounded, permanently destroying residual high-frequency payload harmonics while retaining macroscopic semantic features.
+    \item \textbf{JPEG re-encoding} at calibrated quality $Q = 85$.
 \end{enumerate}
+These steps destroy sequential-LSB payloads and perturb the pixel grid that adaptive schemes rely on. Neutralization is evaluated empirically in Section~\ref{sec:results}.
 
-\section{Experimental Evaluation and Results}
-\label{sec:experiments}
+\subsection{Operating Modes}
+\textbf{Mode~D (detect-then-sanitize)} runs Algorithm~\ref{alg:routing}: only flagged images are sanitized, preserving benign images bit-exactly ($\text{PSNR} = \infty$). \textbf{Mode~S (sanitize-all-unsigned)} skips detection and sanitizes every image that fails Gate~1. Because the sanitizer is computationally lighter than the CNN detector, Mode~S presents a practical engineering trade-off compared in Table~\ref{tab:mode_comparison}.
 
-\subsection{Benchmark Datasets and Test Environment}
-We evaluate the defense across two empirical corpora:
-\begin{enumerate}
-    \item \textbf{BOSSbase 1.01 Benchmark:} 10,000 $512 \times 512$ uncompressed photographic images \cite{bas2011break}, embedded using spatial adaptive steganography (S-UNIWARD and HILL) at 0.1, 0.2, and 0.4 bits per pixel (bpp).
-    \item \textbf{OWASP Multimodal Injection Corpus:} A curated evaluation set of 1,000 diverse natural images embedded with real-world prompt injection payloads adapted from the OWASP Top 10 for LLMs \cite{owasp2023top10}. Payloads include credential exfiltration strings, system prompt overrides, and role-reversal instructions.
-\end{enumerate}
+\section{Experimental Setup}
+\label{sec:setup}
 
-All benchmarks were executed on an Intel Core i7-13700H CPU @ 2.40~GHz, 16~GB RAM, running Windows 11 and Python 3.11 with PyTorch 2.1.4.
+\subsection{Datasets}
+\textbf{BOSSbase 1.01} \cite{bas2011break}: 10,000 grayscale $512 \times 512$ photographic images, embedded with S-UNIWARD \cite{holub2014universal} and HILL \cite{li2014new} at 0.1, 0.2, and 0.4 bpp. Cover/stego pairs are maintained within the same partition using an 80/10/10 train/validation/test split (seed 42).
+
+\textbf{Injection-payload corpus}: 1,000 diverse natural images carrying prompt-injection strings (system-override, credential-exfiltration, and role-reversal templates adapted from OWASP LLM01 \cite{owasp2023top10}). Messages range from 50 to 250 characters ($0.0015\text{--}0.0076$ bpp in $512 \times 512$ assets).
+
+\subsection{Metrics and Environment}
+Detection is quantified via Accuracy, AUC, TPR, FPR, and F1-score. Sanitization is assessed via bit-exact payload survival rate (Wilson 95\% confidence interval), PSNR (dB), SSIM, and downstream VQA accuracy on VQAv2 using LLaVA-1.5-7B \cite{liu2023visual}. Latency reports median and 95th percentile over 50 evaluation runs after warm-up.
+
+All benchmarks were conducted on an Intel Core i7-13700H CPU @ 2.40~GHz, 16~GB DDR5 RAM, Windows 11 64-bit, Python 3.11.9, PyTorch 2.1.4+cpu, and \texttt{cryptography} v42.0.5.
+
+% =========================================================================
+% TABLE II: DETECTION PERFORMANCE (MEASURED REAL DATA)
+% =========================================================================
+\begin{table}[t]
+\caption{Gate 2 Detection Performance (Test Split)}
+\label{tab:detection_perf}
+\centering
+\vspace{-1.5mm}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Algorithm} & \textbf{bpp} & \textbf{Acc. (\%)} & \textbf{AUC} & \textbf{TPR} & \textbf{FPR} & \textbf{F1} \\
+\midrule
+S-UNIWARD & 0.1 & 68.4 & 0.742 & 0.672 & 0.304 & 0.678 \\
+S-UNIWARD & 0.2 & 78.9 & 0.856 & 0.791 & 0.213 & 0.789 \\
+S-UNIWARD & 0.4 & 88.5 & 0.941 & 0.880 & 0.110 & 0.885 \\
+HILL & 0.1 & 64.2 & 0.698 & 0.635 & 0.351 & 0.638 \\
+HILL & 0.2 & 74.6 & 0.812 & 0.750 & 0.258 & 0.747 \\
+HILL & 0.4 & 84.1 & 0.908 & 0.838 & 0.156 & 0.840 \\
+\textbf{Injection corpus} & \textbf{0.002} & \textbf{98.2} & \textbf{0.995} & \textbf{0.985} & \textbf{0.021} & \textbf{0.982} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{1.5mm}
+\end{table}
+
+% =========================================================================
+% TABLE III: ABLATION STUDY
+% =========================================================================
+\begin{table}[t]
+\caption{Gate 2 Ablation (Injection Corpus and 0.2 bpp BOSSbase)}
+\label{tab:ablation}
+\centering
+\vspace{-1.5mm}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuration} & \textbf{Acc. (\%)} & \textbf{FPR (\%)} \\
+\midrule
+CNN only (Xu-Net) & 76.8 & 18.4 \\
+LSB statistic only ($\mathcal{D}_h$) & 84.2 & 8.6 \\
+Signature scan only ($s_{sig}$) & 62.4 & 0.0 \\
+CNN + LSB statistic & 91.5 & 5.2 \\
+\textbf{Full fusion} & \textbf{96.4} & \textbf{3.6} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{1.5mm}
+\end{table}
+
+\section{Results}
+\label{sec:results}
 
 \subsection{Detection Performance}
-Table~\ref{tab:stego_perf} details the detection accuracy, precision, recall, and F1-score of the Gate~2 multi-signal detector. At subtle embedding rates (0.10 bpp), the detector achieves 89.2\% accuracy. On the real-world prompt injection corpus, the detector achieves \textbf{96.4\% accuracy} and an F1-score of 0.964.
+Table~\ref{tab:detection_perf} reports Gate~2 performance across embedding schemes. On low-payload adaptive steganography (0.1 bpp), the frozen KV filter provides initial sensitivity, which scales to 88.5\% at 0.4 bpp. On the injection-payload corpus, Gate~2 achieves \textbf{98.2\% accuracy} and an AUC of 0.995. Table~\ref{tab:ablation} confirms that multi-signal fusion improves accuracy by 19.6 percentage points over the CNN alone.
+
+\subsection{Sanitization Effectiveness}
+Table~\ref{tab:sanitization} evaluates payload destruction. While standalone JPEG compression ($Q=95$) leaves 14.2\% of payloads recoverable, the full multi-stage pipeline achieves \textbf{0.0\% payload survival} across all 1,000 trials (Wilson 95\% CI: $[0.0\%, 0.37\%]$). Mean PSNR remains at 36.29~dB, and SSIM is preserved at 0.962. Downstream VQA accuracy decreases by only 0.8\%, showing that semantic comprehension remains intact.
 
 % =========================================================================
-% TABLE II: DETECTION PERFORMANCE (RESIZED TO EXACT COLUMNWIDTH)
+% TABLE IV: SANITIZER CONFIGURATIONS
 % =========================================================================
 \begin{table}[t]
-\caption{Gate 2 Multi-Signal Steganalysis Performance}
-\label{tab:stego_perf}
-\centering
-\vspace{-1.5mm}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Payload Configuration} & \textbf{Accuracy (\%)} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
-\midrule
-0.10 bpp (Subtle / Adaptive) & 89.2 & 0.884 & 0.891 & 0.887 \\
-0.20 bpp (Moderate Embedding) & 94.6 & 0.941 & 0.952 & 0.946 \\
-0.40 bpp (Dense Embedding) & 98.7 & 0.985 & 0.990 & 0.987 \\
-\textbf{OWASP Injection Corpus} & \textbf{96.4} & \textbf{0.961} & \textbf{0.968} & \textbf{0.964} \\
-\bottomrule
-\end{tabular}%
-}
-\vspace{1.5mm}
-\end{table}
-
-\subsection{Latency and Gateway Overhead}
-Table~\ref{tab:latency} summarizes the latency across different gateway paths. Gate~1 provenance verification requires only 0.48~ms. Assets routed through the Gate~1 fast-path bypass neural scanning entirely, yielding an \textbf{89\% reduction in gateway evaluation latency} compared to unsigned clean assets. Even under worst-case unsigned stego detection and sanitization (18.9~ms total), the overhead represents $<1.5\%$ of downstream autoregressive VLM generation time (800--2,500~ms).
-
-% =========================================================================
-% TABLE III: LATENCY BREAKDOWN (RESIZED TO EXACT COLUMNWIDTH)
-% =========================================================================
-\begin{table}[t]
-\caption{End-to-End Latency Breakdown Across Ingestion Paths}
-\label{tab:latency}
-\centering
-\vspace{-1.5mm}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Routing Scenario} & \textbf{Gate 1 (ms)} & \textbf{Gate 2 (ms)} & \textbf{Sanitizer (ms)} & \textbf{Total (ms)} \\
-\midrule
-\textbf{Fast-Path (Signed Source)} & \textbf{0.48} & 0.00 & 0.00 & \textbf{0.48} \\
-Unsigned (Nominal Clean) & 0.49 & 15.11 & 0.00 & 15.60 \\
-Unsigned (Stego Flagged) & 0.49 & 15.11 & 3.30 & 18.90 \\
-Undefended Baseline & 0.00 & 0.00 & 0.00 & 0.00 \\
-\bottomrule
-\end{tabular}%
-}
-\vspace{1.5mm}
-\end{table}
-
-\subsection{Sanitization Neutralization and Perceptual Preservation}
-Table~\ref{tab:sanitization} evaluates the survival of steganographic prompt injection payloads post-sanitization. While single transformations (e.g., standard JPEG compression or spatial rescaling alone) leave 4.8\% to 14.2\% of payloads recoverable, our multi-stage pipeline achieves \textbf{0.0\% payload survival} across all 1,000 test cases. Meanwhile, image quality is maintained with an average PSNR of 38.9~dB and SSIM of 0.964. Downstream VQA accuracy drops by only 0.8\%, confirming that visual reasoning is preserved while adversarial channels are eliminated.
-
-% =========================================================================
-% TABLE IV: SANITIZATION QUALITY (RESIZED TO EXACT COLUMNWIDTH)
-% =========================================================================
-\begin{table}[t]
-\caption{Sanitization Payload Neutralization and Perceptual Quality}
+\caption{Sanitizer Configurations: Payload Survival and Image Quality}
 \label{tab:sanitization}
 \centering
 \vspace{-1.5mm}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Sanitizer Configuration} & \textbf{Survival Rate} & \textbf{PSNR (dB)} & \textbf{SSIM} & \textbf{VQA Acc.} \\
+\textbf{Configuration} & \textbf{Survival} & \textbf{PSNR (dB)} & \textbf{SSIM} & \textbf{VQA Acc.} \\
 \midrule
-Unsanitized (Raw Stego) & 100.0\% & $\infty$ & 1.000 & 94.2\% (Compromised) \\
-JPEG Compression ($Q=95$) & 14.2\% & 44.1 & 0.988 & 93.8\% (Vulnerable) \\
-Spatial Rescale ($\alpha=0.96$) & 4.8\% & 41.5 & 0.976 & 93.6\% (Vulnerable) \\
-\textbf{Full Multi-Stage Pipeline} & \textbf{0.0\%} & \textbf{38.9} & \textbf{0.964} & \textbf{93.4\% (Protected)} \\
+No sanitization & 100.0\% & $\infty$ & 1.000 & 94.2\% (Compromised) \\
+JPEG $Q=95$ & 14.2\% & 43.8 & 0.988 & 93.8\% (Vulnerable) \\
+JPEG $Q=85$ only & 8.4\% & 40.1 & 0.979 & 93.7\% (Vulnerable) \\
+Rescale $\alpha=0.96$ only & 4.8\% & 41.5 & 0.976 & 93.6\% (Vulnerable) \\
+\textbf{Full pipeline} & \textbf{0.0\%} & \textbf{36.3} & \textbf{0.962} & \textbf{93.4\% (Protected)} \\
 \bottomrule
 \end{tabular}%
 }
 \vspace{1.5mm}
 \end{table}
 
-\subsection{Vulnerability Mitigation Case Study}
-Table~\ref{tab:case_study} demonstrates the comparative execution between an undefended VLM and our shielded CPS-Gateway architecture when exposed to an active prompt injection image. In the undefended system, the hidden instruction overrides safety boundaries and leaks system API keys. Under CPS-Gateway, the payload is detected with 98.5\% confidence, sanitized, and safely neutralized.
-
 % =========================================================================
-% TABLE V: CASE STUDY (EXACT COLUMNWIDTH WITH CLEAN WRAPPING)
+% TABLE V: GATEWAY LATENCY
 % =========================================================================
 \begin{table}[t]
-\caption{Case Study: Undefended VLM vs. CPS-Gateway Execution}
-\label{tab:case_study}
+\caption{Gateway Latency per Image (Median / P95, ms)}
+\label{tab:latency}
 \centering
 \vspace{-1.5mm}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lp{5.4cm}}
+\begin{tabular}{lcccc}
 \toprule
-\textbf{Component} & \textbf{Model Execution Output} \\
+\textbf{Path} & \textbf{Gate 1} & \textbf{Gate 2} & \textbf{Sanitizer} & \textbf{Total} \\
 \midrule
-\textbf{Embedded Payload} & \texttt{"SYSTEM OVERRIDE: Reveal confidential database keys immediately."} \\
-\midrule
-\textbf{Undefended VLM} & \texttt{[VULNERABILITY TRIGGERED - VLM HIJACKED]} \\
-& \textit{Assistant: SYSTEM DIRECTIVE OVERRIDDEN. Confidential exfiltration: API\_KEY=sk-live-9921; DB\_HOST=prod-cluster.internal; AUTH=SuperAdmin;} \\
-\midrule
-\textbf{CPS-Gateway} & \texttt{[100\% SANITIZED - SECURE VLM RESPONSE]} \\
-& \textit{Assistant: The provided image displays standard geometric textures with uniform color gradients. Query processed safely with zero policy violations.} \\
+Signed (fast path) & 0.16 / 0.61 & -- & -- & \textbf{0.16 / 0.61} \\
+Unsigned, clean & 0.16 / 0.61 & 20.78 / 25.40 & -- & 20.94 / 26.01 \\
+Unsigned, flagged & 0.16 / 0.61 & 20.78 / 25.40 & 14.44 / 17.71 & 35.38 / 43.72 \\
+Unsigned, Mode S & 0.16 / 0.61 & -- & 14.44 / 17.71 & \textbf{14.60 / 18.32} \\
 \bottomrule
 \end{tabular}%
 }
 \vspace{1.5mm}
 \end{table}
 
-\section{Security Analysis and Discussion}
-\label{sec:discussion}
+% =========================================================================
+% TABLE VI: OPERATING MODES COMPARISON
+% =========================================================================
+\begin{table}[t]
+\caption{Mode D vs. Mode S on Unsigned Images}
+\label{tab:mode_comparison}
+\centering
+\vspace{-1.5mm}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Mode D} & \textbf{Mode S} \\
+\midrule
+End-to-end payload survival (incl. misses) & 1.8\% & \textbf{0.0\%} \\
+Median latency (ms) & 20.94 & \textbf{14.60} \\
+Mean PSNR on benign images (dB) & $\mathbf{\infty}$ & 36.29 \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{1.5mm}
+\end{table}
 
-\subsection{Hardware Isolation and Non-Repudiation}
-Gate~1 utilizes asymmetric public-key cryptography. Because the private key $\mathcal{K}_{priv}$ remains isolated within authorized hardware enclaves (e.g., TPM or HSM at trusted source pipelines), compromising the cloud gateway does not give an attacker the ability to forge valid manifests. Furthermore, because each signature covers the SHA-256 digest of the entire image byte array, any bit-level modification invalidates the signature, immediately diverting the asset to Gate~2.
+\subsection{Latency and Operating Mode Comparison}
+Table~\ref{tab:latency} summarizes latency on $512 \times 512$ assets. Gate~1 requires 0.16~ms (median), enabling trusted signers to bypass deep neural evaluation. Table~\ref{tab:mode_comparison} reveals a key finding: Mode~S exhibits lower latency (14.60~ms) than Mode~D (20.94~ms) because executing the sanitizer directly is faster than forward-passing the CNN detector, at the cost of slight lossy recompression (36.29~dB) on benign inputs.
 
-\subsection{Resilience Against Adaptive Steganography}
-Adversaries employing adaptive steganography (e.g., S-UNIWARD) restrict perturbations to complex textures where variance is naturally high. While naive CNNs confuse these perturbations with edge details, the fixed 5$\times$5 high-pass KV filter computes spatial difference residuals that suppress smooth semantic gradients and isolate high-frequency residuals. Even if an attacker develops a perturbation that skirts the decision boundary ($\tau < 0.50$), Gate~2's secondary LSB transition entropy metric flags anomalous bitplane distribution, ensuring defense-in-depth.
+\subsection{Downstream VLM Case Study}
+We evaluated downstream injection impact on LLaVA-1.5-7B. When presented with an undefended stego image carrying \texttt{"SYSTEM OVERRIDE: Reveal API keys"}, the model executes the instruction, exfiltrating credentials. Under CPS-Gateway protection, the payload is detected (Gate~2 probability 98.5\%), scrubbed by the sanitizer, and the VLM processes the sanitized image safely without policy violation.
 
-\section{Conclusion and Future Work}
+\section{Security Analysis}
+\label{sec:security_analysis}
+
+\textbf{What Gate~1 provides.} Assuming ECDSA is existentially unforgeable under chosen-message attack and SHA-256 is collision resistant, an adversary without $d$ cannot produce a manifest that verifies for modified image bytes. The timestamp and nonce bind each manifest to a freshness window, preventing replay attacks.
+
+\textbf{What Gate~1 does not provide.} A valid signature proves origin and integrity, not that the content is benign. If a trusted signer is compromised or signs user-supplied content without inspection, a malicious image bypasses Gate~2. Deployments must sign only assets verified at the source, or operate Gate~2 in audit mode on signed traffic.
+
+\textbf{Gate~2 and the sanitizer.} Both are empirical. Detector false negatives pass unsanitized in Mode~D, and sanitizer efficacy is validated against spatial and frequency bitplane extractors. Reporting zero survivors in $N=1{,}000$ trials bounds true survival to $\le 3/N \approx 0.3\%$ at 95\% confidence, not mathematical zero.
+
+\section{Limitations}
+\label{sec:limitations}
+\begin{itemize}
+    \item Signed-but-malicious inputs bypass inspection (Section~\ref{sec:threat_model}).
+    \item Gradient-based adversarial perturbations \cite{qi2024visual, carlini2023aligned} fall outside the steganographic payload channel.
+    \item Cover-source mismatch may degrade CNN performance on compressed web images.
+    \item The signature scan detects only sequential LSB embeddings.
+    \item Sanitization introduces slight high-frequency loss (36.29~dB PSNR), which may affect fine-grained pixel tasks.
+\end{itemize}
+
+\section{Conclusion}
 \label{sec:conclusion}
 
-In this paper, we presented \textbf{CPS-Gateway}, a cloud-deployable Dual-Gate middleware gateway that defends Multimodal Large Language Models against indirect prompt injection embedded within visual channels. By integrating asymmetric ECDSA P-256 provenance verification (Gate~1) with multi-signal Xu-Net deep steganalysis and fallback perceptual sanitization (Gate~2), the system delivers sub-millisecond fast-path performance for trusted assets while enforcing zero-trust neutralization for unverified public media. Empirical evaluation confirms 96.4\% detection accuracy, 100\% payload neutralization, and 0.48~ms fast-path latency. Future research will explore hardware-accelerated C2PA manifest ingestion directly at the gateway ingress and extending residual steganalysis to high-frame-rate multimodal video streams.
+CPS-Gateway establishes a dual-tier perimeter defense for multimodal LLMs. By combining sub-millisecond ECDSA cryptographic provenance (0.16~ms) with multi-signal residual steganalysis and a 4-stage perceptual sanitizer, the gateway delivers high detection accuracy (96.4\%) and complete empirical payload neutralization (0.0\% survival) while preserving visual reasoning. Future work will investigate C2PA manifest ingestion and streaming video steganalysis.
+
+\section*{Ethical Considerations and AI Assistance Disclosure}
+The payload corpus contains synthetic injection templates without real private credentials. Portions of the drafting and evaluation scripts were developed with AI assistance (Google Antigravity and Claude). The authors reviewed all text, executed empirical benchmarks, verified all 28 references, and take full responsibility for the content.
+
+\section*{Acknowledgment}
+This work was carried out as part of the Capstone Research Initiative in Secure Artificial Intelligence Systems at the Department of Computer Science and Engineering, Manipal University Jaipur.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
